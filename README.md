@@ -5,10 +5,13 @@
 
 ## Текущее состояние
 
-Готов локальный каркас FastAPI: конфигурация, логирование, healthcheck,
-структура модулей и тесты. Главная страница пока возвращает JSON с русским текстом.
-База данных, авторизация, интерфейс и Telegram появятся на следующих этапах.
+Готовы каркас FastAPI, доменная модель SQLAlchemy и миграции SQLite.
+При старте создается база и системная группа; перед обновлением существующей
+схемы выполняется backup. Главная страница пока возвращает JSON.
+Авторизация, интерфейс и Telegram появятся на следующих этапах.
 Приложение пока предназначено для локальной разработки.
+
+Подробности, команды миграций и восстановление: [База данных](docs/database.md).
 
 ## Первый запуск на Windows (PowerShell)
 
@@ -44,13 +47,25 @@ Telegram polling и планировщик. Access log отключен, что�
 .\.venv\Scripts\python.exe -m pytest -q
 ```
 
+Если после переключения между Windows sandbox и обычным пользователем pytest
+сообщает об отказе в доступе к старому временному каталогу, используйте новый
+каталог внутри проекта (не изменяя права системного Temp):
+
+```powershell
+New-Item -ItemType Directory -Path test-results -Force | Out-Null
+$testRunPath = Join-Path (Get-Location) ("test-results/pytest-" + [guid]::NewGuid().ToString("N"))
+.\.venv\Scripts\python.exe -X utf8 -m pytest -q -p no:cacheprovider --basetemp $testRunPath
+```
+
 Тесты проверяют lifecycle/readiness, недопустимый Host, конфигурацию production
-и UTF-8 в HTTP-ответе и `.env`, включая `ё` и emoji. Рабочие данные не используются.
+и UTF-8 в HTTP-ответе, `.env` и SQLite, включая `ё` и emoji.
+Проверяются также миграции, backup/restore, ограничения БД и откат транзакций.
+Рабочие данные не используются.
 
 `/health/live` возвращает `200`, пока сервер отвечает.
 `/health/ready` возвращает `200` после старта и `503`, если приложение не готово.
-Пока readiness проверяет только lifecycle. Проверка базы и миграций будет
-добавлена вместе с SQLite; endpoint не сообщает о готовности Telegram.
+Readiness проверяет lifecycle, доступность SQLite и актуальность revision.
+Endpoint пока не сообщает о готовности Telegram.
 
 ## Настройки
 
@@ -62,7 +77,7 @@ Telegram polling и планировщик. Access log отключен, что�
 | `APP_ENV` | `development` | `development`, `test` или `production` |
 | `APP_BASE_URL` | `http://127.0.0.1:8000` | Базовый адрес приложения |
 | `APP_ALLOWED_HOSTS` | `["127.0.0.1","localhost"]` | Список хостов в формате JSON |
-| `APP_DATA_DIR` | `./data` | Будущий каталог SQLite; пока не создается |
+| `APP_DATA_DIR` | `./data` | Каталог SQLite и backups |
 | `APP_LOG_LEVEL` | `INFO` | Уровень логирования приложения |
 
 В production обязателен HTTPS, а хост `APP_BASE_URL` должен присутствовать

@@ -6,8 +6,8 @@ from app.config import Settings
 from app.main import create_app
 
 
-def test_lifecycle_and_utf8():
-    app = create_app(Settings(_env_file=None))
+def test_lifecycle_and_utf8(tmp_path):
+    app = create_app(Settings(_env_file=None, data_dir=tmp_path))
     with TestClient(app, base_url="http://localhost") as client:
         assert client.get("/health/live").json() == {"status": "ok"}
         assert client.get("/health/ready").status_code == 200
@@ -51,3 +51,31 @@ def test_env_file_utf8(tmp_path):
     env_file.write_text("APP_DATA_DIR=./данные/Семья-Ёжики-🎂\n", encoding="utf-8")
     settings = Settings(_env_file=env_file)
     assert settings.data_dir.name == "Семья-Ёжики-🎂"
+
+
+def test_readiness_database_failure(tmp_path, monkeypatch):
+    from sqlalchemy.exc import SQLAlchemyError
+
+    app = create_app(Settings(_env_file=None, data_dir=tmp_path))
+
+    def database_failure(_engine):
+        raise SQLAlchemyError("internal database details")
+
+    with TestClient(app, base_url="http://localhost") as client:
+        monkeypatch.setattr("app.web.routes.schema_is_current", database_failure)
+        response = client.get("/health/ready")
+        assert response.status_code == 503
+        assert response.json() == {"status": "not_ready"}
+        assert client.get("/health/live").status_code == 200
+
+
+def test_failed_migration_prevents_start(tmp_path, monkeypatch):
+    app = create_app(Settings(_env_file=None, data_dir=tmp_path))
+
+    def fail_upgrade(_path):
+        raise RuntimeError("Migration failed")
+
+    monkeypatch.setattr("app.main.upgrade_database", fail_upgrade)
+    with pytest.raises(RuntimeError, match="Migration failed"), TestClient(app):
+        pass
+    assert app.state.ready is False
