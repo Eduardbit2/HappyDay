@@ -47,8 +47,9 @@ with sync_playwright() as playwright:
             page.screenshot(path=str(data_dir / "login-failure.png"), full_page=True)
             raise RuntimeError("Browser login failed")
         page.wait_for_url(base_url + "/")
-        assert page.get_by_role("heading", name="Здравствуйте, Алёна Ёжик!").is_visible()
-        page.get_by_role("link", name="Семья", exact=True).click()
+        assert page.get_by_role("heading", name="Ближайшие", exact=True).is_visible()
+        page.goto(base_url + "/settings")
+        page.get_by_role("link", name="Семья Аккаунты и приглашения", exact=True).click()
         page.wait_for_load_state("networkidle")
         print("Admin actions:", page.get_by_role("button").all_text_contents())
         page.get_by_role("button", name="Создать приглашение").click()
@@ -66,7 +67,7 @@ with sync_playwright() as playwright:
         member.get_by_label("Повторите пароль", exact=True).fill(password)
         member.get_by_role("button", name="Создать аккаунт").click()
         member.wait_for_url(base_url + "/")
-        assert member.get_by_role("heading", name="Здравствуйте, Лёля 🎂!").is_visible()
+        assert member.get_by_role("heading", name="Ближайшие", exact=True).is_visible()
         page.goto(base_url + "/admin")
         page.wait_for_load_state("networkidle")
         card = page.locator("article.member").filter(
@@ -86,6 +87,35 @@ with sync_playwright() as playwright:
         member.screenshot(path=str(data_dir / "login-mobile.png"), full_page=True)
         page.set_viewport_size({"width": 390, "height": 900})
         page.screenshot(path=str(data_dir / "admin-mobile.png"), full_page=True)
+        page.goto(base_url + "/")
+        page.get_by_role("link", name="Добавить", exact=True).click()
+        page.wait_for_load_state("networkidle")
+        print("Birthday labels:", page.locator("label").all_text_contents())
+        page.get_by_label("Имя и фамилия", exact=True).fill("Анна Проверка 🎂")
+        page.get_by_label("День", exact=True).fill("12")
+        page.get_by_label("Месяц", exact=True).select_option("9")
+        page.get_by_role("button", name="Сохранить день рождения").click()
+        page.get_by_role("status").filter(has_text="День рождения сохранен").wait_for()
+        assert page.get_by_role("heading", name="Анна Проверка 🎂").is_visible()
+        for route in (
+            "/",
+            "/birthdays",
+            "/birthdays/new",
+            "/settings",
+            "/groups",
+            "/profile",
+            "/admin",
+        ):
+            page.goto(base_url + route)
+            page.wait_for_load_state("networkidle")
+            for width in (320, 360, 390, 430, 768, 1280):
+                page.set_viewport_size({"width": width, "height": 900})
+                assert page.evaluate("document.documentElement.scrollWidth <= innerWidth"), (
+                    route,
+                    width,
+                )
+        page.emulate_media(reduced_motion="reduce")
+        assert page.locator(".workspace").evaluate("e=>getComputedStyle(e).animationName") == "none"
         assert not errors, errors
         print("Browser auth flow, revocation and responsive widths: OK")
     finally:

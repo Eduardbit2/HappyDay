@@ -2,7 +2,7 @@
 {% block title %}Вход · HappyDay{% endblock %}
 {% block content %}
 <section class="narrow">
-<p class="eyebrow">Рады видеть вас дома</p><h1>Войти в HappyDay</h1>
+<h1>Войти в HappyDay</h1>
 <p>Дни рождения близких — в одном месте.</p>
 <form method="post" action="/login">{{ csrf_field(csrf) }}
 {{ field("login", "Логин", autocomplete="username", maxlength=40, error=error) }}

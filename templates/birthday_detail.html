@@ -1,0 +1,7 @@
+{% extends "base.html" %}{% from "components/events.html" import feature %}
+{% block title %}{{ event.person.name }} · HappyDay{% endblock %}
+{% block content %}<a class="back-link" href="/birthdays"><i class="bi bi-arrow-left" aria-hidden="true"></i> Все дни рождения</a>
+{% if saved %}<p class="alert alert-success" role="status">День рождения сохранен.</p>{% endif %}
+{{ feature(event) }}
+{% if event.person.note %}<section class="note-section"><h2>Заметка</h2><p class="preserve-lines">{{ event.person.note }}</p></section>{% endif %}
+<a class="quiet-link" href="/">К ближайшим событиям</a>{% endblock %}

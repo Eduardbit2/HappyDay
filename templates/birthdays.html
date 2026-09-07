@@ -1,0 +1,14 @@
+{% extends "base.html" %}{% from "components/events.html" import event_row %}
+{% block title %}Все дни рождения · HappyDay{% endblock %}
+{% block content %}
+<div class="page-heading"><h1>Все дни рождения</h1><p>Семья, друзья и те, кто вам дорог</p></div>
+<form method="get" action="/birthdays" class="filter-bar">
+<div><label for="q">Поиск по имени</label><input class="form-control" id="q" name="q" value="{{ q }}" placeholder="Например, Анна" maxlength="200" type="search"></div>
+<div><label for="group">Группа</label><select class="form-select" id="group" name="group"><option value="">Все группы</option>{% for group in groups %}<option value="{{ group.id }}" {% if selected_group == group.id %}selected{% endif %}>{{ group.name }}</option>{% endfor %}</select></div>
+<div><label for="month">Месяц</label><select class="form-select" id="month" name="month"><option value="">Все месяцы</option>{% for month in months %}<option value="{{ loop.index }}" {% if selected_month == loop.index %}selected{% endif %}>{{ month|capitalize }}</option>{% endfor %}</select></div>
+<button type="submit" class="btn btn-primary">Найти</button>
+</form>
+{% if q or selected_group or selected_month %}<a href="/birthdays" class="quiet-link">Сбросить фильтры</a>{% endif %}
+{% if events %}<ul class="event-list all-events">{% for event in events %}{{ event_row(event) }}{% endfor %}</ul>
+{% else %}<section class="empty-state"><i class="bi bi-search" aria-hidden="true"></i><h2>{{ "Ничего не найдено" if q or selected_group or selected_month else "Добавьте близких" }}</h2><p>{{ "Попробуйте другое имя или сбросьте фильтры." if q or selected_group or selected_month else "Дни рождения будут собраны в одном списке." }}</p></section>{% endif %}
+{% endblock %}

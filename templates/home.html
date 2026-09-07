@@ -1,7 +1,11 @@
-{% extends "base.html" %}
-{% block content %}<section class="narrow">
-<p class="eyebrow">Ваша семья рядом</p><h1>Здравствуйте, {{ user.name }}!</h1>
-<p>Вы вошли в HappyDay. Здесь появится список ближайших дней рождения.</p>
-<a class="button" href="/profile">Открыть профиль</a>
-{% if user.role == 'admin' %}<p><a href="/admin">Пригласить членов семьи</a></p>{% endif %}
-</section>{% endblock %}
+{% extends "base.html" %}{% from "components/events.html" import feature,event_row %}
+{% block title %}Ближайшие · HappyDay{% endblock %}
+{% block content %}
+<div class="page-heading"><h1>Ближайшие</h1><p>Важные даты ваших близких</p></div>
+{% if events %}
+{{ feature(events[0]) }}
+{% if events|length > 1 %}<section class="timeline"><h2>Дальше в календаре</h2><ul class="event-list">{% for event in events[1:] %}{{ event_row(event) }}{% endfor %}</ul></section>{% endif %}
+{% else %}
+<section class="empty-state"><i class="bi bi-calendar2-heart" aria-hidden="true"></i><h2>Пока никого нет</h2><p>Добавьте первый день рождения — и важные даты будут рядом.</p><a class="btn btn-primary" href="/birthdays/new">Добавить день рождения</a></section>
+{% endif %}
+{% endblock %}

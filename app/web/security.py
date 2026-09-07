@@ -17,7 +17,8 @@ class SecurityHeadersMiddleware:
                         (b"x-frame-options", b"DENY"),
                         (
                             b"content-security-policy",
-                            b"default-src 'self'; style-src 'self'; script-src 'none'; "
+                            b"default-src 'self'; style-src 'self'; script-src 'self'; "
+                            b"img-src 'self' data:; "
                             b"base-uri 'none'; form-action 'self'; frame-ancestors 'none'",
                         ),
                     ]

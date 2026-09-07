@@ -53,15 +53,6 @@ def login(
     return redirect(request, ctx, "/")
 
 
-@router.get("/")
-def home(
-    request: Request,
-    user: Annotated[User, Depends(current_user)],
-    ctx: Annotated[AuthContext, Depends(get_context)],
-):
-    return render(request, ctx, "home.html")
-
-
 @router.get("/profile")
 def profile(
     request: Request,

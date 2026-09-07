@@ -1,0 +1,17 @@
+{% extends "base.html" %}{% from "macros.html" import csrf_field %}
+{% block title %}Добавить день рождения · HappyDay{% endblock %}
+{% block content %}
+<a class="back-link" href="/birthdays"><i class="bi bi-arrow-left" aria-hidden="true"></i> Все дни рождения</a>
+<section class="narrow"><div class="page-heading"><h1>Добавить день рождения</h1><p>Начните с имени и даты. Остальное — по желанию.</p></div>
+<form action="/birthdays/new" method="post" class="stack-form">{{ csrf_field(csrf) }}
+{% macro input(key,label,type="text",required=false,maxlength=200) %}
+<div class="field"><label for="{{ key }}">{{ label }}</label><input class="form-control {% if errors.get(key) %}is-invalid{% endif %}" id="{{ key }}" name="{{ key }}" type="{{ type }}" value="{{ values.get(key,'') }}" maxlength="{{ maxlength }}" {% if required %}required{% endif %} {% if type == 'number' %}inputmode="numeric"{% endif %} {% if errors.get(key) %}aria-invalid="true" aria-describedby="{{ key }}-error"{% endif %}>
+{% if errors.get(key) %}<p class="invalid-feedback" id="{{ key }}-error">{{ errors[key] }}</p>{% endif %}</div>{% endmacro %}
+{{ input("name","Имя и фамилия",required=true) }}
+<div class="date-fields">{{ input("day","День","number",true) }}<div class="field"><label for="month">Месяц</label><select class="form-select {% if errors.get('month') %}is-invalid{% endif %}" id="month" name="month" required {% if errors.get('month') %}aria-invalid="true" aria-describedby="month-error"{% endif %}><option value="">Выберите</option>{% for month in months %}<option value="{{ loop.index }}" {% if values.get('month') == loop.index|string %}selected{% endif %}>{{ month|capitalize }}</option>{% endfor %}</select>{% if errors.get('month') %}<p id="month-error" class="invalid-feedback">{{ errors.month }}</p>{% endif %}</div></div>
+{{ input("year","Год рождения","number") }}<p class="hint">Если год неизвестен, оставьте поле пустым.</p>
+<div class="field"><label for="group_id">Группа</label><select class="form-select {% if errors.get('group_id') %}is-invalid{% endif %}" id="group_id" name="group_id" {% if errors.get('group_id') %}aria-invalid="true" aria-describedby="group_id-error"{% endif %}>{% for group in groups %}<option value="{{ group.id }}" {% if values.get('group_id') == group.id|string %}selected{% endif %}>{{ group.name }}</option>{% endfor %}</select>{% if errors.get('group_id') %}<p id="group_id-error" class="invalid-feedback">{{ errors.group_id }}</p>{% endif %}</div>
+<div class="field"><label for="note">Заметка</label><textarea class="form-control" id="note" name="note" rows="3" maxlength="2000">{{ values.get('note','') }}</textarea>{% if errors.get('note') %}<p class="text-danger">{{ errors.note }}</p>{% endif %}</div>
+{% if duplicate %}<div class="alert alert-warning" role="alert"><p>Такое имя и дата уже есть в списке.</p><label class="check"><input type="checkbox" name="confirm_duplicate" value="1" required> Все равно добавить отдельную запись</label></div>{% endif %}
+<button class="btn btn-primary" type="submit">Сохранить день рождения</button><a class="cancel-link" href="/birthdays">Отмена</a>
+</form></section>{% endblock %}

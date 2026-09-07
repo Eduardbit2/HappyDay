@@ -1,0 +1,8 @@
+{% extends "base.html" %}
+{% block title %}Настройки · HappyDay{% endblock %}
+{% block content %}<div class="page-heading"><h1>Настройки</h1><p>{{ user.name }}</p></div>
+<ul class="settings-list">
+<li><a href="/profile"><i class="bi bi-person-circle" aria-hidden="true"></i><span><strong>Профиль</strong><small>Пароль и устройства</small></span><i class="bi bi-chevron-right" aria-hidden="true"></i></a></li>
+<li><a href="/groups"><i class="bi bi-tags" aria-hidden="true"></i><span><strong>Группы</strong><small>Организуйте круг близких</small></span><i class="bi bi-chevron-right" aria-hidden="true"></i></a></li>
+{% if user.role == 'admin' %}<li><a href="/admin"><i class="bi bi-people" aria-hidden="true"></i><span><strong>Семья</strong><small>Аккаунты и приглашения</small></span><i class="bi bi-chevron-right" aria-hidden="true"></i></a></li>{% endif %}
+</ul>{% endblock %}
