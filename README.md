@@ -7,9 +7,11 @@
 
 Готовы каркас FastAPI, доменная модель SQLAlchemy и миграции SQLite.
 При старте создается база и системная группа; перед обновлением существующей
-схемы выполняется backup. Главная страница пока возвращает JSON.
-Авторизация, интерфейс и Telegram появятся на следующих этапах.
+схемы выполняется backup. Реализованы вход, профиль, закрытые приглашения
+и управление семейными аккаунтами. Общий интерфейс и Telegram — следующие этапы.
 Приложение пока предназначено для локальной разработки.
+
+Первый администратор и правила входа: [Авторизация](docs/authentication.md).
 
 Подробности, команды миграций и восстановление: [База данных](docs/database.md).
 
@@ -25,12 +27,14 @@ py -3.12 -m venv .venv
 .\.venv\Scripts\uv.exe sync --locked --cache-dir .uv-cache
 Copy-Item .env.example .env
 $env:PYTHONUTF8 = "1"
+.\.venv\Scripts\python.exe -m app.auth create-admin --name "Администратор" --login admin
 .\.venv\Scripts\python.exe -m uvicorn app.main:create_app --factory --host 127.0.0.1 --port 8000 --no-proxy-headers --no-access-log
 ```
 
 Копируйте `.env.example` только при первой настройке, чтобы сохранить свои настройки.
 Активация `.venv` и изменение ExecutionPolicy не требуются.
-Откройте <http://127.0.0.1:8000>. Остановка — `Ctrl+C`.
+Команда create-admin нужна один раз: она попросит пароль со скрытым вводом.
+Откройте <http://127.0.0.1:8000/login>. Остановка — `Ctrl+C`.
 Для автоматического перезапуска при разработке добавьте `--reload`.
 
 Всегда используем один worker: в будущем этот же процесс запустит
@@ -79,10 +83,11 @@ Endpoint пока не сообщает о готовности Telegram.
 | `APP_ALLOWED_HOSTS` | `["127.0.0.1","localhost"]` | Список хостов в формате JSON |
 | `APP_DATA_DIR` | `./data` | Каталог SQLite и backups |
 | `APP_LOG_LEVEL` | `INFO` | Уровень логирования приложения |
+| `APP_SESSION_HOURS` | `168` | Абсолютный срок сессии в часах |
 
 В production обязателен HTTPS, а хост `APP_BASE_URL` должен присутствовать
-в `APP_ALLOWED_HOSTS`. Пустой список и wildcard запрещены. Сессии, CSRF и Origin
-будут реализованы на этапе авторизации.
+в `APP_ALLOWED_HOSTS`. Пустой список и wildcard запрещены. Все изменяющие
+формы авторизации проверяют CSRF и Origin; cookie в production получает Secure.
 
 Календарные расчеты будут использовать `Europe/Moscow` через `zoneinfo`;
 `tzdata` закреплена для поддержки Windows. `TZ` в `.env.example` отражает

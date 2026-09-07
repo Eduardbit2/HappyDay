@@ -1,0 +1,35 @@
+{% extends "base.html" %}{% from "macros.html" import csrf_field, field, role_select %}
+{% block title %}Семья · HappyDay{% endblock %}
+{% block content %}<h1>Семейные аккаунты</h1>
+{% if invitation_token %}<section class="notice" role="status"><h2>Приглашение создано</h2>
+<p>Передайте человеку этот код и адрес страницы «Присоединиться к семье». Код действует 48 часов и показывается только сейчас.</p>
+<label for="invitation-code">Код приглашения</label><textarea id="invitation-code" readonly rows="2">{{ invitation_token }}</textarea>
+<a href="/join">Страница приглашения</a></section>{% endif %}
+<section class="narrow"><h2>Пригласить в семью</h2>
+<form method="post" action="/admin/invitations">{{ csrf_field(csrf) }}{{ role_select("invite-role") }}<button type="submit">Создать приглашение</button></form></section>
+<section><h2>Участники</h2>
+{% for member in users %}<article class="member">
+<h3>{{ member.name }}</h3><p class="muted">{{ member.login }} · {{ "Активен" if member.is_active else "Отключен" }}</p>
+<form method="post" action="/admin/users/{{ member.id }}">{{ csrf_field(csrf) }}
+<label for="role-{{ member.id }}">Роль {{ member.name }}</label><select name="role" id="role-{{ member.id }}"><option value="member" {% if member.role == "member" %}selected{% endif %}>Участник семьи</option><option value="admin" {% if member.role == "admin" %}selected{% endif %}>Администратор</option></select>
+<label class="check"><input type="checkbox" name="is_active" value="1" {% if member.is_active %}checked{% endif %}>Аккаунт активен</label><button class="secondary" type="submit">Сохранить доступ</button></form>
+<form method="post" action="/admin/users/{{ member.id }}/sessions/revoke">{{ csrf_field(csrf) }}<button type="submit" class="secondary">Завершить сеансы</button></form>
+<details><summary>Задать новый пароль</summary>
+<p>Текущие сеансы пользователя будут завершены.</p>
+<form method="post" action="/admin/users/{{ member.id }}/password">{{ csrf_field(csrf) }}
+<label for="reset-password-{{ member.id }}">Новый пароль для {{ member.name }}</label>
+<input type="password" id="reset-password-{{ member.id }}" name="password" autocomplete="new-password" minlength="12" maxlength="128" required>
+<button class="secondary" type="submit">Задать пароль</button></form></details>
+</article>{% endfor %}</section>
+<section class="narrow"><h2>Создать аккаунт вручную</h2>
+<form method="post" action="/admin/users">{{ csrf_field(csrf) }}
+{{ field("name", "Имя", autocomplete="off", error=error) }}
+{{ field("login", "Логин", autocomplete="off", minlength=3, maxlength=40, error=error) }}
+{{ field("password", "Пароль для нового аккаунта", type="password", autocomplete="new-password", minlength=12, maxlength=128, error=error) }}
+{{ role_select("new-role") }}<button type="submit">Создать аккаунт</button></form></section>
+<section><h2>Последние приглашения</h2>
+{% for invite in invitations %}<article class="member"><h3>Приглашение №{{ invite.id }}</h3>
+<p>{{ "Администратор" if invite.role == "admin" else "Участник" }} · {% if invite.accepted_at %}Принято{% elif invite.revoked_at %}Отозвано{% elif invite.expires_at <= now %}Срок истек{% else %}Действует до {{ invite.expires_at | moscow_time }} МСК{% endif %}</p>
+{% if not invite.accepted_at and not invite.revoked_at %}<form method="post" action="/admin/invitations/{{ invite.id }}/revoke">{{ csrf_field(csrf) }}<button class="secondary" type="submit">Отозвать приглашение</button></form>{% endif %}
+</article>{% else %}<p>Приглашений пока нет.</p>{% endfor %}</section>
+{% endblock %}

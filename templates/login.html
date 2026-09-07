@@ -1,0 +1,15 @@
+{% extends "base.html" %}{% from "macros.html" import csrf_field, field %}
+{% block title %}Вход · HappyDay{% endblock %}
+{% block content %}
+<section class="narrow">
+<p class="eyebrow">Рады видеть вас дома</p><h1>Войти в HappyDay</h1>
+<p>Дни рождения близких — в одном месте.</p>
+<form method="post" action="/login">{{ csrf_field(csrf) }}
+{{ field("login", "Логин", autocomplete="username", maxlength=40, error=error) }}
+{{ field("password", "Пароль", type="password", autocomplete="current-password", maxlength=128, error=error) }}
+<button type="submit">Войти</button>
+</form>
+<p>Есть приглашение? <a href="/join">Присоединиться к семье</a></p>
+<p class="muted">Если вы забыли пароль, обратитесь к семейному администратору.</p>
+</section>
+{% endblock %}

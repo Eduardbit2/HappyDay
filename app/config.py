@@ -3,7 +3,7 @@
 from pathlib import Path
 from typing import Literal
 
-from pydantic import HttpUrl, field_validator, model_validator
+from pydantic import Field, HttpUrl, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -17,6 +17,8 @@ class Settings(BaseSettings):
     allowed_hosts: list[str] = ["127.0.0.1", "localhost"]
     data_dir: Path = Path("data")
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = "INFO"
+
+    session_hours: int = Field(default=168, ge=1, le=720)
 
     @field_validator("allowed_hosts")
     @classmethod

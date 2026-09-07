@@ -1,0 +1,7 @@
+{% extends "base.html" %}
+{% block content %}<section class="narrow">
+<p class="eyebrow">Ваша семья рядом</p><h1>Здравствуйте, {{ user.name }}!</h1>
+<p>Вы вошли в HappyDay. Здесь появится список ближайших дней рождения.</p>
+<a class="button" href="/profile">Открыть профиль</a>
+{% if user.role == 'admin' %}<p><a href="/admin">Пригласить членов семьи</a></p>{% endif %}
+</section>{% endblock %}

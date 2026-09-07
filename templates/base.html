@@ -1,0 +1,17 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>{% block title %}HappyDay{% endblock %}</title>
+<link rel="stylesheet" href="/static/auth.css">
+</head>
+<body>
+<a class="skip" href="#main">Перейти к содержимому</a>
+<header><a class="brand" href="/">HappyDay<span>Семейные дни рождения</span></a>
+{% if user %}<nav aria-label="Основная навигация"><a href="/">Главная</a><a href="/profile">Профиль</a>{% if user.role == 'admin' %}<a href="/admin">Семья</a>{% endif %}</nav>{% endif %}
+</header>
+<main id="main">
+{% if error %}<p id="form-error" class="error" role="alert">{{ error }}</p>{% endif %}
+{% block content %}{% endblock %}
+</main>
+</body></html>

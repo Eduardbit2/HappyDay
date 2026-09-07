@@ -161,3 +161,35 @@ class DeliveryAttempt(Base):
     attempted_at: Mapped[datetime] = mapped_column(
         DateTime, server_default=func.current_timestamp()
     )
+
+
+class AuthSession(Base):
+    __tablename__ = "auth_sessions"
+    token_hash: Mapped[str] = mapped_column(String(64), primary_key=True)
+    user_id: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), index=True
+    )
+    csrf_token: Mapped[str] = mapped_column(String(64))
+    expires_at: Mapped[datetime] = mapped_column(DateTime, index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.current_timestamp())
+
+
+class Invitation(Base):
+    __tablename__ = "invitations"
+    __table_args__ = (CheckConstraint("role IN ('admin', 'member')", name="role"),)
+    id: Mapped[int] = mapped_column(primary_key=True)
+    token_hash: Mapped[str] = mapped_column(String(64), unique=True)
+    created_by: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="RESTRICT"))
+    role: Mapped[str] = mapped_column(String(10), server_default="member")
+    expires_at: Mapped[datetime] = mapped_column(DateTime)
+    accepted_at: Mapped[datetime | None] = mapped_column(DateTime)
+    revoked_at: Mapped[datetime | None] = mapped_column(DateTime)
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.current_timestamp())
+
+
+class LoginThrottle(Base):
+    __tablename__ = "login_throttles"
+    __table_args__ = (CheckConstraint("attempts >= 0", name="attempts"),)
+    key: Mapped[str] = mapped_column(String(64), primary_key=True)
+    attempts: Mapped[int] = mapped_column(Integer)
+    expires_at: Mapped[datetime] = mapped_column(DateTime, index=True)

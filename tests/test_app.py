@@ -11,9 +11,9 @@ def test_lifecycle_and_utf8(tmp_path):
     with TestClient(app, base_url="http://localhost") as client:
         assert client.get("/health/live").json() == {"status": "ok"}
         assert client.get("/health/ready").status_code == 200
-        response = client.get("/")
+        response = client.get("/login")
         assert response.status_code == 200
-        assert "Семейные дни рождения" in response.content.decode("utf-8")
+        assert "Войти в HappyDay" in response.content.decode("utf-8")
         assert client.get("/", headers={"host": "untrusted.example"}).status_code == 400
         assert client.get("/docs").status_code == 404
     assert app.state.ready is False

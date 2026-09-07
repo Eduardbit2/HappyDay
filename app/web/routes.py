@@ -7,11 +7,6 @@ from app.db.migrations import schema_is_current
 router = APIRouter()
 
 
-@router.get("/")
-async def index() -> dict[str, str]:
-    return {"name": "HappyDay", "message": "Семейные дни рождения — каркас приложения готов"}
-
-
 @router.get("/health/live")
 async def live() -> dict[str, str]:
     return {"status": "ok"}

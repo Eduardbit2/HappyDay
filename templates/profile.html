@@ -1,0 +1,14 @@
+{% extends "base.html" %}{% from "macros.html" import csrf_field, field %}
+{% block title %}Профиль · HappyDay{% endblock %}
+{% block content %}<section class="narrow"><h1>Профиль</h1>
+<p>{{ user.name }} · {{ user.login }}</p>
+<h2>Изменить пароль</h2><p>После изменения потребуется войти заново на всех устройствах.</p>
+<form method="post" action="/profile/password">{{ csrf_field(csrf) }}
+{{ field("current_password", "Текущий пароль", type="password", autocomplete="current-password", maxlength=128, error=error) }}
+{{ field("password", "Новый пароль", type="password", autocomplete="new-password", minlength=12, maxlength=128, error=error) }}
+{{ field("password_confirm", "Повторите новый пароль", type="password", autocomplete="new-password", minlength=12, maxlength=128, error=error) }}
+<button type="submit">Изменить пароль</button></form>
+<h2>Устройства</h2>
+<form method="post" action="/logout">{{ csrf_field(csrf) }}<button type="submit" class="secondary">Выйти</button></form>
+<form method="post" action="/logout-all">{{ csrf_field(csrf) }}<button type="submit" class="secondary">Выйти на всех устройствах</button></form>
+</section>{% endblock %}

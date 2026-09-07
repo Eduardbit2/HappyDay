@@ -24,6 +24,8 @@ def create_db_engine(path: Path) -> Engine:
 
     @event.listens_for(engine, "begin")
     def begin(connection):
-        connection.exec_driver_sql("BEGIN")
+        connection.exec_driver_sql(
+            "BEGIN IMMEDIATE" if connection.get_execution_options().get("sqlite_write") else "BEGIN"
+        )
 
     return engine

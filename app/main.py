@@ -2,16 +2,20 @@
 
 import logging
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI
 from starlette.concurrency import run_in_threadpool
 from starlette.middleware.trustedhost import TrustedHostMiddleware
+from starlette.staticfiles import StaticFiles
 
+from app.auth.routes import router as auth_router
 from app.config import Settings
 from app.db.engine import create_db_engine
 from app.db.migrations import upgrade_database
 from app.logging import configure_logging
 from app.web.routes import router
+from app.web.security import SecurityHeadersMiddleware
 
 logger = logging.getLogger(__name__)
 
@@ -47,5 +51,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     application.state.settings = settings
     application.state.ready = False
     application.add_middleware(TrustedHostMiddleware, allowed_hosts=settings.allowed_hosts)
+    application.add_middleware(SecurityHeadersMiddleware)
     application.include_router(router)
+    application.include_router(auth_router)
+    application.mount(
+        "/static", StaticFiles(directory=str(Path(__file__).parents[1] / "static")), name="static"
+    )
     return application

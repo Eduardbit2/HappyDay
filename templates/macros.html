@@ -1,0 +1,8 @@
+{% macro csrf_field(csrf) %}<input type="hidden" name="csrf_token" value="{{ csrf }}">{% endmacro %}
+{% macro field(name, label, type="text", autocomplete="", required=true, minlength="", maxlength=200, error=none) %}
+<label for="{{ name }}">{{ label }}</label>
+<input id="{{ name }}" name="{{ name }}" type="{{ type }}" {% if autocomplete %}autocomplete="{{ autocomplete }}"{% endif %} {% if required %}required{% endif %} {% if minlength %}minlength="{{ minlength }}"{% endif %} maxlength="{{ maxlength }}" {% if error %}aria-invalid="true" aria-describedby="form-error"{% endif %}>
+{% endmacro %}
+{% macro role_select(id="role") %}
+<label for="{{ id }}">Роль</label><select name="role" id="{{ id }}"><option value="member">Участник семьи</option><option value="admin">Администратор</option></select>
+{% endmacro %}

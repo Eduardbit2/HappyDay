@@ -1,0 +1,14 @@
+{% extends "base.html" %}{% from "macros.html" import csrf_field, field %}
+{% block title %}Приглашение · HappyDay{% endblock %}
+{% block content %}<section class="narrow">
+<h1>Присоединиться к семье</h1><p>Введите код, который передал администратор.</p>
+<form method="post" action="/join">{{ csrf_field(csrf) }}
+{{ field("token", "Код приглашения", autocomplete="off", maxlength=64, error=error) }}
+{{ field("name", "Ваше имя", autocomplete="name", error=error) }}
+{{ field("login", "Логин", autocomplete="username", minlength=3, maxlength=40, error=error) }}
+<p class="hint">От 3 до 40 букв, цифр, точек, дефисов или подчеркиваний.</p>
+{{ field("password", "Пароль", type="password", autocomplete="new-password", minlength=12, maxlength=128, error=error) }}
+<p class="hint">От 12 до 128 символов.</p>
+{{ field("password_confirm", "Повторите пароль", type="password", autocomplete="new-password", minlength=12, maxlength=128, error=error) }}
+<button type="submit">Создать аккаунт</button></form>
+<p><a href="/login">Вернуться ко входу</a></p></section>{% endblock %}
