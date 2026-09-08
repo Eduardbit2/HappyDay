@@ -2,6 +2,6 @@
 {% block title %}Группы · HappyDay{% endblock %}
 {% block content %}<a class="back-link" href="/settings"><i class="bi bi-arrow-left" aria-hidden="true"></i> Настройки</a>
 <div class="page-heading"><h1>Группы</h1><p>Чтобы проще находить своих</p></div>
-<ul class="group-list">{% for group in groups %}<li><i class="bi bi-tag" data-color="{{ group.color }}" aria-hidden="true"></i><span>{{ group.name }}</span>{% if group.is_system %}<small>По умолчанию</small>{% endif %}</li>{% endfor %}</ul>
+<ul class="group-list">{% for group in groups %}<li><a class="group-mark" data-group="{{ group.id }}" href="/groups/{{ group.id }}/edit">{{ group.icon }} {{ group.name }}</a>{% if group.is_system %}<small>По умолчанию</small>{% endif %}</li>{% endfor %}</ul>
 <section class="narrow"><h2>Новая группа</h2><form method="post" action="/groups" class="stack-form">{{ csrf_field(csrf) }}<div class="field"><label for="name">Название</label><input class="form-control" name="name" id="name" required maxlength="100" placeholder="Например, Друзья"></div>
 <div class="field"><label for="color">Цвет</label><select class="form-select" id="color" name="color"><option value="#728C72">Шалфей</option><option value="#B68C70">Терракота</option><option value="#8293A3">Серо-голубой</option><option value="#8A8178">Нейтральный</option></select></div><button class="btn btn-primary" type="submit">Создать группу</button></form></section>{% endblock %}

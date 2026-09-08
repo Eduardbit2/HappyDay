@@ -9,6 +9,7 @@
 <link rel="stylesheet" href="/static/app.css">
 <script src="/static/vendor/bootstrap/bootstrap.bundle.min.js" defer></script>
 <script src="/static/app.js" defer></script>
+{% if user %}<link rel="stylesheet" href="/groups/colors.css">{% endif %}
 </head>
 <body class="{% if user %}authenticated{% else %}guest{% endif %}">
 <a class="skip" href="#main">Перейти к содержимому</a>

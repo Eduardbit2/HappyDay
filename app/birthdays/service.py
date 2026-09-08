@@ -6,10 +6,10 @@ from calendar import isleap
 from datetime import date, datetime
 from zoneinfo import ZoneInfo
 
-from sqlalchemy import select, update
+from sqlalchemy import delete, select, update
 from sqlalchemy.orm import Session
 
-from app.db.models import SYSTEM_GROUP_ID, Birthday, Group
+from app.db.models import SYSTEM_GROUP_ID, Birthday, Delivery, Group
 
 
 class DuplicateBirthdayError(ValueError):
@@ -41,8 +41,11 @@ def create_birthday(
     group_id: int = SYSTEM_GROUP_ID,
     note: str = "",
     confirm_duplicate: bool = False,
+    birthday_id: int | None = None,
 ) -> Birthday:
     name = validate_birthday(name, day, month, year)
+    if len(note) > 2000:
+        raise ValueError("Заметка должна содержать не более 2000 символов")
     if session.get(Group, group_id) is None:
         raise ValueError("Группа не найдена")
     candidates = session.scalars(
@@ -53,11 +56,19 @@ def create_birthday(
         )
     )
     if not confirm_duplicate and any(
-        normalize_text(item.name).casefold() == name.casefold() for item in candidates
+        item.id != birthday_id and normalize_text(item.name).casefold() == name.casefold()
+        for item in candidates
     ):
         raise DuplicateBirthdayError("Такое имя и дата уже есть, подтвердите сохранение")
-    birthday = Birthday(name=name, day=day, month=month, year=year, group_id=group_id, note=note)
+    birthday = session.get(Birthday, birthday_id) if birthday_id is not None else Birthday()
+    if birthday is None:
+        raise ValueError("Именинник не найден")
+    date_changed = birthday_id is not None and (birthday.day, birthday.month) != (day, month)
+    birthday.name, birthday.day, birthday.month = name, day, month
+    birthday.year, birthday.group_id, birthday.note = year, group_id, note
     session.add(birthday)
+    if date_changed:
+        cancel_pending_deliveries(session, birthday_id)
     session.flush()
     return birthday
 
@@ -94,6 +105,7 @@ def archive_birthday(session: Session, birthday_id: int) -> None:
     if birthday is None:
         raise ValueError("Именинник не найден")
     birthday.is_active = False
+    cancel_pending_deliveries(session, birthday_id)
     session.flush()
 
 
@@ -106,3 +118,49 @@ def age_in_year(birthday: Birthday, year: int) -> int | None:
     if birthday.year is None or year < birthday.year:
         return None
     return year - birthday.year
+
+
+def cancel_pending_deliveries(session: Session, birthday_id: int) -> None:
+    session.execute(
+        update(Delivery)
+        .where(
+            Delivery.birthday_id == birthday_id,
+            Delivery.status.in_(("pending", "retry", "sending")),
+        )
+        .values(status="cancelled")
+    )
+
+
+def restore_birthday(session: Session, birthday_id: int) -> None:
+    birthday = session.get(Birthday, birthday_id)
+    if birthday is None:
+        raise ValueError("Именинник не найден")
+    birthday.is_active = True
+    session.flush()
+
+
+def delete_birthday(session: Session, birthday_id: int) -> None:
+    birthday = session.get(Birthday, birthday_id)
+    if birthday is None or birthday.is_active:
+        raise ValueError("Удалить окончательно можно только запись из архива")
+    session.execute(delete(Delivery).where(Delivery.birthday_id == birthday_id))
+    session.delete(birthday)
+    session.flush()
+
+
+def update_group(
+    session: Session, group_id: int, *, name: str, icon: str, color: str, sort_order: int
+) -> Group:
+    group = session.get(Group, group_id)
+    if group is None:
+        raise ValueError("Группа не найдена")
+    name, icon = normalize_text(name), normalize_text(icon)
+    if not 1 <= len(name) <= 100 or not 1 <= len(icon) <= 100:
+        raise ValueError("Укажите название и иконку группы")
+    if not re.fullmatch(r"#[0-9a-fA-F]{6}", color) or not 0 <= sort_order <= 1_000_000:
+        raise ValueError("Укажите цвет #RRGGBB и порядок от 0 до 1000000")
+    if group.is_system and name != group.name:
+        raise ValueError("Название системной группы нельзя изменить")
+    group.name, group.icon, group.color, group.sort_order = name, icon, color, sort_order
+    session.flush()
+    return group

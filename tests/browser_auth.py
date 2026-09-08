@@ -97,12 +97,76 @@ with sync_playwright() as playwright:
         page.get_by_role("button", name="Сохранить день рождения").click()
         page.get_by_role("status").filter(has_text="День рождения сохранен").wait_for()
         assert page.get_by_role("heading", name="Анна Проверка 🎂").is_visible()
+        detail_url = page.url.split("?")[0]
+        page.get_by_role("link", name="Редактировать", exact=True).click()
+        page.wait_for_load_state("networkidle")
+        page.get_by_label("Имя и фамилия", exact=True).fill("Анна Изменённая 🎂")
+        page.get_by_role("button", name="Сохранить день рождения").click()
+        page.get_by_role("heading", name="Анна Изменённая 🎂").wait_for()
+        page.get_by_role("button", name="В архив", exact=True).click()
+        page.wait_for_url(base_url + "/birthdays/archive")
+        page.get_by_role("link").filter(has_text="Анна Изменённая 🎂").click()
+        page.get_by_role("button", name="Восстановить", exact=True).click()
+        page.get_by_role("status").filter(has_text="День рождения сохранен").wait_for()
+        page.goto(base_url + "/groups")
+        page.get_by_label("Название", exact=True).fill("Браузерная группа")
+        page.get_by_role("button", name="Создать группу").click()
+        page.get_by_role("link").filter(has_text="Браузерная группа").click()
+        group_edit_url = page.url
+        page.get_by_label("Иконка или emoji").fill("🎂")
+        page.get_by_label("Порядок сортировки").fill("3")
+        page.get_by_role("button", name="Сохранить группу").click()
+        page.wait_for_url(base_url + "/groups")
+        page.goto(base_url + "/data")
+        page.wait_for_load_state("networkidle")
+        print("CSV labels:", page.locator("label").all_text_contents())
+        csv_text = (
+            "name;day;month;year;group;note;active\n"
+            "Лёля CSV 🎂;29;2;;Браузерная группа;Любит чай;0\n"
+        )
+        page.get_by_label("Файл CSV", exact=True).set_input_files(
+            {
+                "name": "дни-рождения.csv",
+                "mimeType": "text/csv",
+                "buffer": csv_text.encode("utf-8-sig"),
+            }
+        )
+        page.wait_for_function("document.getElementById('csv').value.includes('Лёля CSV')")
+        page.get_by_role("button", name="Предпросмотр", exact=True).click()
+        page.get_by_role("heading", name="Предпросмотр CSV", exact=True).wait_for()
+        page.screenshot(path=str(data_dir / "csv-preview-mobile.png"), full_page=True)
+        assert page.evaluate("document.documentElement.scrollWidth <= innerWidth")
+        page.get_by_label("Подтверждаю добавление записей и новых групп").check()
+        page.get_by_role("button", name="Импортировать", exact=True).click()
+        page.get_by_role("status").filter(has_text="Импорт завершен").wait_for()
+        with page.expect_download() as download_info:
+            page.get_by_role("link", name="Скачать CSV", exact=True).click()
+        download = download_info.value
+        export_path = data_dir / "download.csv"
+        download.save_as(export_path)
+        assert "Лёля CSV 🎂" in export_path.read_text(encoding="utf-8-sig")
+        page.goto(group_edit_url)
+        page.get_by_label("Подтверждаю перенос записей и удаление группы").check()
+        page.get_by_role("button", name="Удалить группу", exact=True).click()
+        page.wait_for_url(base_url + "/groups")
+        page.goto(base_url + "/birthdays/archive")
+        page.get_by_role("link").filter(has_text="Лёля CSV 🎂").click()
+        assert "Без группы" in page.locator("main").inner_text()
+        page.get_by_role("link", name="Удалить окончательно", exact=True).click()
+        page.get_by_label("Подтверждаю окончательное удаление").check()
+        page.get_by_role("button", name="Удалить окончательно", exact=True).click()
+        page.wait_for_url(base_url + "/birthdays/archive")
+        assert "Лёля CSV 🎂" not in page.locator("main").inner_text()
         for route in (
             "/",
             "/birthdays",
             "/birthdays/new",
             "/settings",
             "/groups",
+            "/groups/1/edit",
+            "/data",
+            "/birthdays/archive",
+            detail_url.removeprefix(base_url) + "/edit",
             "/profile",
             "/admin",
         ):

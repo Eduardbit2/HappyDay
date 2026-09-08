@@ -1,0 +1,12 @@
+{% extends "base.html" %}{% from "macros.html" import csrf_field %}
+{% block title %}Предпросмотр CSV · HappyDay{% endblock %}
+{% block content %}<a class="back-link" href="/data">← Выбрать другой файл</a>
+<div class="page-heading"><h1>Предпросмотр CSV</h1><p>Записей к добавлению: {{ rows|length }}. Подтвердите в течение 15 минут.</p></div>
+{% if new_groups %}<p>Будут созданы группы: {{ new_groups|join(', ') }}.</p>{% endif %}
+{% if duplicates %}<p class="alert alert-warning">Найдены совпадения имени и даты: {{ duplicates|length }}. Они отмечены в списке.</p>{% endif %}
+<ol class="csv-preview">{% for row in rows %}<li><strong>{{ row.name }}</strong> · {{ "%02d"|format(row.day) }}.{{ "%02d"|format(row.month) }}{% if row.year %}.{{ row.year }}{% endif %}
+<p>{{ row.group }} · {{ "В календаре" if row.active else "В архиве" }}{% if loop.index in duplicates %} · <strong>Возможный дубль</strong>{% endif %}</p>{% if row.note %}<p class="preserve-lines">{{ row.note }}</p>{% endif %}</li>{% endfor %}</ol>
+<form action="/data/import" method="post" class="stack-form narrow">{{ csrf_field(csrf) }}<input type="hidden" name="draft_token" value="{{ draft_token }}">
+{% if duplicates %}<label class="check"><input type="checkbox" name="confirm_duplicates" value="1" required> Сохранить совпадения как отдельные записи</label>{% endif %}
+<label class="check"><input type="checkbox" name="confirm" value="1" required> Подтверждаю добавление записей и новых групп</label>
+<button class="btn btn-primary" type="submit">Импортировать</button><a class="cancel-link" href="/data">Отмена</a></form>{% endblock %}

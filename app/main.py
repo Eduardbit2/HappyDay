@@ -15,6 +15,7 @@ from app.db.engine import create_db_engine
 from app.db.migrations import upgrade_database
 from app.logging import configure_logging
 from app.web.birthdays import router as birthday_router
+from app.web.csv_routes import router as csv_router
 from app.web.routes import router
 from app.web.security import SecurityHeadersMiddleware
 
@@ -56,6 +57,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     application.include_router(router)
     application.include_router(auth_router)
     application.include_router(birthday_router)
+    application.include_router(csv_router)
     application.mount(
         "/static", StaticFiles(directory=str(Path(__file__).parents[1] / "static")), name="static"
     )

@@ -1,0 +1,16 @@
+{% extends "base.html" %}{% from "macros.html" import csrf_field %}
+{% block title %}Изменить группу · HappyDay{% endblock %}
+{% block content %}<section class="narrow"><a class="back-link" href="/groups">← Группы</a>
+<div class="page-heading"><h1>Изменить группу</h1></div>
+<form action="/groups/{{ group.id }}/edit" method="post" class="stack-form">{{ csrf_field(csrf) }}
+<div class="field"><label for="name">Название</label><input class="form-control" id="name" name="name" value="{{ values.get('name','') }}" maxlength="100" required {% if group.is_system %}readonly{% endif %}></div>
+<div class="field"><label for="icon">Иконка или emoji</label><input class="form-control" id="icon" name="icon" value="{{ values.get('icon','') }}" maxlength="100" required></div>
+<div class="field"><label for="color">Цвет #RRGGBB</label><input class="form-control" id="color" name="color" value="{{ values.get('color','') }}" pattern="#[0-9a-fA-F]{6}" required></div>
+<div class="field"><label for="sort_order">Порядок сортировки</label><input class="form-control" id="sort_order" name="sort_order" type="number" min="0" max="1000000" value="{{ values.get('sort_order','0') }}" required></div>
+<button class="btn btn-primary" type="submit">Сохранить группу</button>
+</form>
+{% if not group.is_system %}<section class="danger-section"><h2>Удалить группу</h2><p>Все записи, включая архивные, будут перенесены в выбранную группу.</p>
+<form action="/groups/{{ group.id }}/delete" method="post" class="stack-form">{{ csrf_field(csrf) }}
+<div class="field"><label for="transfer_to">Перенести записи в</label><select class="form-select" id="transfer_to" name="transfer_to">{% for target in groups %}{% if target.id != group.id %}<option value="{{ target.id }}">{{ target.name }}</option>{% endif %}{% endfor %}</select></div>
+<label class="check"><input type="checkbox" name="confirm" value="1" required> Подтверждаю перенос записей и удаление группы</label><button type="submit" class="btn btn-outline-danger">Удалить группу</button></form></section>{% endif %}
+</section>{% endblock %}

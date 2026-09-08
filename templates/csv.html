@@ -1,0 +1,14 @@
+{% extends "base.html" %}{% from "macros.html" import csrf_field %}
+{% block title %}Импорт и экспорт · HappyDay{% endblock %}
+{% block content %}<section class="narrow"><a class="back-link" href="/settings">← Настройки</a>
+<div class="page-heading"><h1>Импорт и экспорт</h1><p>Перенесите дни рождения через CSV.</p></div>
+{% if imported %}<p class="alert alert-success" role="status">Импорт завершен. Дни рождения добавлены.</p>{% endif %}
+<h2>Экспорт</h2><p>Все записи, включая архив, в UTF-8 с BOM. Такой файл можно открыть в Excel.</p><p><a class="btn btn-outline-primary" href="/data/export">Скачать CSV</a></p>
+<section class="danger-section"><h2>Импорт</h2><p>Выберите CSV в UTF-8: до 256 КБ и 500 записей. Сначала покажем предпросмотр. Существующие записи сохранятся; новые группы будут созданы.</p>
+<p>Разделитель — точка с запятой. Столбцы:</p><p class="csv-columns">name;day;month;year;group;note;active</p>
+<p class="hint">year можно оставить пустым, active: 1 — в календаре, 0 — в архиве. Для образца скачайте экспорт.</p>
+<form method="post" action="/data/preview" class="stack-form">{{ csrf_field(csrf) }}
+<div class="field"><label for="csv-file">Файл CSV</label><input class="form-control" id="csv-file" type="file" accept=".csv,text/csv" aria-describedby="csv-file-error"><p id="csv-file-error" class="text-danger" role="alert"></p></div>
+<div class="field"><label for="csv">Содержимое CSV</label><textarea class="form-control" name="csv" id="csv" rows="7" required spellcheck="false"></textarea><p class="hint">Файл заполнит это поле автоматически. Можно вставить CSV вручную.</p></div>
+<button type="submit" class="btn btn-primary">Предпросмотр</button></form></section>
+</section>{% endblock %}

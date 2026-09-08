@@ -1,0 +1,7 @@
+{% extends "base.html" %}{% from "components/events.html" import event_row %}
+{% block title %}Архив · HappyDay{% endblock %}
+{% block content %}<a class="back-link" href="/birthdays">← Все дни рождения</a>
+<div class="page-heading"><h1>Архив</h1><p>Откройте запись, чтобы восстановить или удалить ее окончательно.</p></div>
+{% if events %}<ul class="event-list">{% for event in events %}{{ event_row(event) }}{% endfor %}</ul>
+{% else %}<section class="empty-state"><h2>Архив пуст</h2><p>Здесь появятся дни рождения, которые вы убрали из календаря.</p></section>{% endif %}
+{% endblock %}

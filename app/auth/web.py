@@ -96,10 +96,11 @@ async def protected_form(
         raise HTTPException(403, "Источник запроса не разрешен")
     if request.headers.get("content-type", "").split(";")[0] != "application/x-www-form-urlencoded":
         raise HTTPException(415, "Ожидается обычная web-форма")
+    limit = 2_097_152 if request.url.path == "/data/preview" and ctx.user else 16_384
     body = bytearray()
     async for chunk in request.stream():
         body.extend(chunk)
-        if len(body) > 16_384:
+        if len(body) > limit:
             raise HTTPException(413, "Форма слишком большая")
     try:
         parsed = parse_qs(

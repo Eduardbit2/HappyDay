@@ -3,12 +3,12 @@
 <div class="calendar-date"><span class="big-day">{{ event.day }}</span><span class="big-month">{{ event.month }}</span></div>
 <div class="event-info"><h2><a href="/birthdays/{{ event.person.id }}">{{ event.person.name }}</a></h2>
 <p>{{ event.when }}{% if event.age %} · Исполнится {{ event.age }}{% endif %}</p>
-<span class="group-label">{{ event.group.name }}</span></div>
+<span class="group-label group-mark" data-group="{{ event.group.id }}">{{ event.group.icon }} {{ event.group.name }}</span></div>
 </section>{% endmacro %}
 {% macro event_row(event) %}
 <li><a class="event-row" href="/birthdays/{{ event.person.id }}">
 <time datetime="{{ event.date.isoformat() }}"><span>{{ event.day }}</span> {{ event.short_month }}</time>
 <span class="row-name">{{ event.person.name }}</span>
-<span class="row-meta">{{ event.group.name }} · {{ event.age or "Возраст не указан" }}</span>
+<span class="row-meta"><span class="group-mark" data-group="{{ event.group.id }}">{{ event.group.icon }} {{ event.group.name }}</span> · {{ event.age or "Возраст не указан" }}</span>
 <i class="bi bi-chevron-right" aria-hidden="true"></i>
 </a></li>{% endmacro %}

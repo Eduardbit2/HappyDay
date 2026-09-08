@@ -2,6 +2,7 @@
 {% block title %}Все дни рождения · HappyDay{% endblock %}
 {% block content %}
 <div class="page-heading"><h1>Все дни рождения</h1><p>Семья, друзья и те, кто вам дорог</p></div>
+<p><a class="quiet-link" href="/birthdays/archive">Архив</a></p>
 <form method="get" action="/birthdays" class="filter-bar">
 <div><label for="q">Поиск по имени</label><input class="form-control" id="q" name="q" value="{{ q }}" placeholder="Например, Анна" maxlength="200" type="search"></div>
 <div><label for="group">Группа</label><select class="form-select" id="group" name="group"><option value="">Все группы</option>{% for group in groups %}<option value="{{ group.id }}" {% if selected_group == group.id %}selected{% endif %}>{{ group.name }}</option>{% endfor %}</select></div>

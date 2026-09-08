@@ -20,7 +20,7 @@ a { text-underline-offset: 4px; }
 .desktop-nav a { display: flex; align-items: center; padding: 8px 2px; border-bottom: 2px solid transparent; color: var(--hd-ink); text-decoration: none; font-size: 16px; }
 .desktop-nav [aria-current] { border-color: var(--hd-green); font-weight: 600; }
 .btn, button, .button { min-height: 48px; padding: 10px 20px; font-size: 16px; border-radius: var(--hd-radius); font-weight: 500; transition: background-color .15s, transform .12s; }
-.btn-primary, button:not(.secondary), .button { --bs-btn-bg: var(--hd-green); --bs-btn-border-color: var(--hd-green); --bs-btn-hover-bg: #284b37; --bs-btn-hover-border-color: #284b37; --bs-btn-active-bg: #244431; --bs-btn-active-border-color: #244431; --bs-btn-disabled-bg: var(--hd-green); --bs-btn-disabled-border-color: var(--hd-green); background: var(--hd-green); color: white; border: 1px solid var(--hd-green); }
+.btn-primary, button:not(.btn):not(.secondary), .button { --bs-btn-bg: var(--hd-green); --bs-btn-border-color: var(--hd-green); --bs-btn-hover-bg: #284b37; --bs-btn-hover-border-color: #284b37; --bs-btn-active-bg: #244431; --bs-btn-active-border-color: #244431; --bs-btn-disabled-bg: var(--hd-green); --bs-btn-disabled-border-color: var(--hd-green); background: var(--hd-green); color: white; border: 1px solid var(--hd-green); }
 .btn i { margin-right: 6px; }
 .btn:active, button:active { transform: translateY(1px); }
 .btn-secondary, .secondary { background: var(--hd-soft); border: 1px solid var(--hd-line); color: var(--hd-ink); }
@@ -156,3 +156,14 @@ details[open] { animation: appear .15s ease; }
   html { scroll-padding-bottom: calc(105px + env(safe-area-inset-bottom)); }
   input, select, textarea, button { scroll-margin-bottom: 105px; }
 }
+
+.record-actions { display:flex; flex-wrap:wrap; align-items:center; gap:12px; margin:24px 0; }
+.record-actions form { margin:0; }
+.danger-section { border-top:1px solid var(--hd-line); margin-top:40px; padding-top:28px; }
+
+.csv-columns, .csv-preview { overflow-wrap:anywhere; }
+.csv-preview li { padding:16px 0; border-bottom:1px solid var(--hd-line); }
+.csv-preview p { margin:6px 0 0; }
+
+.group-mark::before { content:""; display:inline-block; width:8px; height:8px; border-radius:50%; background:var(--group-color,#8A8178); margin-right:6px; vertical-align:middle; }
+.btn-outline-primary { --bs-btn-color:var(--hd-green); --bs-btn-border-color:var(--hd-green); --bs-btn-hover-bg:var(--hd-green); --bs-btn-hover-border-color:var(--hd-green); }

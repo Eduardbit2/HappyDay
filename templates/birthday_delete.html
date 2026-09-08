@@ -1,0 +1,9 @@
+{% extends "base.html" %}{% from "macros.html" import csrf_field %}
+{% block title %}Удалить запись · HappyDay{% endblock %}
+{% block content %}<section class="narrow"><a class="back-link" href="/birthdays/{{ person.id }}">← К записи</a>
+<div class="page-heading"><h1>Удалить запись?</h1><p>{{ person.name }}</p></div>
+<p>День рождения, заметка и история напоминаний будут удалены без возможности восстановления.</p>
+<form method="post" action="/birthdays/{{ person.id }}/delete" class="stack-form">{{ csrf_field(csrf) }}
+<label class="check"><input type="checkbox" name="confirm" value="1" required> Подтверждаю окончательное удаление</label>
+<button class="btn btn-danger" type="submit">Удалить окончательно</button><a class="cancel-link" href="/birthdays/{{ person.id }}">Отмена</a>
+</form></section>{% endblock %}

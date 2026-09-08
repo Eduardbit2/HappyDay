@@ -193,3 +193,13 @@ class LoginThrottle(Base):
     key: Mapped[str] = mapped_column(String(64), primary_key=True)
     attempts: Mapped[int] = mapped_column(Integer)
     expires_at: Mapped[datetime] = mapped_column(DateTime, index=True)
+
+
+class CsvDraft(Base):
+    __tablename__ = "csv_drafts"
+    token_hash: Mapped[str] = mapped_column(String(64), primary_key=True)
+    session_hash: Mapped[str] = mapped_column(
+        ForeignKey("auth_sessions.token_hash", ondelete="CASCADE"), unique=True
+    )
+    payload: Mapped[str] = mapped_column(Text)
+    expires_at: Mapped[datetime] = mapped_column(DateTime, index=True)

@@ -297,3 +297,36 @@ def test_failed_upgrade_rolls_back_and_preserves_backup(tmp_path, monkeypatch):
         )
     assert len(list((tmp_path / "backups").glob("*.db"))) == 1
     assert not list((tmp_path / "backups").glob("*.partial"))
+
+
+def test_csv_migration_preserves_existing_data_and_backup(tmp_path):
+    path = tmp_path / "happyday.db"
+    engine = create_db_engine(path)
+    try:
+        with engine.begin() as connection:
+            config = migration_config()
+            config.attributes["connection"] = connection
+            command.upgrade(config, "0002_auth")
+            connection.exec_driver_sql(
+                "INSERT INTO users (name, login, password_hash, role) VALUES (?, ?, ?, ?)",
+                ("Администратор Ёжик", "admin", "test-hash", "admin"),
+            )
+            connection.exec_driver_sql(
+                "INSERT INTO birthdays (name, day, month) VALUES ('Лёля 🎂', 29, 2)"
+            )
+        backup = upgrade_database(path)
+        assert backup is not None
+        with sqlite3.connect(backup) as snapshot:
+            assert (
+                snapshot.execute("SELECT version_num FROM alembic_version").fetchone()[0]
+                == "0002_auth"
+            )
+            assert snapshot.execute("SELECT name FROM users").fetchone()[0] == "Администратор Ёжик"
+        with engine.begin() as connection:
+            config.attributes["connection"] = connection
+            command.check(config)
+            command.downgrade(config, "0002_auth")
+            assert connection.exec_driver_sql("SELECT name FROM birthdays").scalar() == "Лёля 🎂"
+            assert connection.exec_driver_sql("SELECT login FROM users").scalar() == "admin"
+    finally:
+        engine.dispose()
