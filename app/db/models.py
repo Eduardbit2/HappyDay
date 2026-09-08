@@ -203,3 +203,23 @@ class CsvDraft(Base):
     )
     payload: Mapped[str] = mapped_column(Text)
     expires_at: Mapped[datetime] = mapped_column(DateTime, index=True)
+
+
+class TelegramPairRequest(Base):
+    __tablename__ = "telegram_pair_requests"
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), primary_key=True
+    )
+    session_hash: Mapped[str] = mapped_column(
+        ForeignKey("auth_sessions.token_hash", ondelete="CASCADE")
+    )
+    token_hash: Mapped[str] = mapped_column(String(64), unique=True)
+    expires_at: Mapped[datetime] = mapped_column(DateTime)
+    telegram_id: Mapped[int | None] = mapped_column(Integer)
+    display_name: Mapped[str | None] = mapped_column(String(200))
+
+
+class BotCursor(Base):
+    __tablename__ = "bot_cursors"
+    bot_id: Mapped[str] = mapped_column(String(20), primary_key=True)
+    next_update_id: Mapped[int] = mapped_column(Integer)

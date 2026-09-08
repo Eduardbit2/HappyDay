@@ -25,6 +25,7 @@ def main():
     env = {
         **{key: value for key, value in os.environ.items() if not key.startswith("APP_")},
         "APP_ENV": "test",
+        "APP_TELEGRAM_TOKEN": "",
         "APP_DATA_DIR": str(data_dir),
         "APP_BASE_URL": base_url,
         "APP_ALLOWED_HOSTS": '["127.0.0.1","localhost"]',

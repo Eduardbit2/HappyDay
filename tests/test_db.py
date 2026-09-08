@@ -330,3 +330,32 @@ def test_csv_migration_preserves_existing_data_and_backup(tmp_path):
             assert connection.exec_driver_sql("SELECT login FROM users").scalar() == "admin"
     finally:
         engine.dispose()
+
+
+def test_telegram_migration_preserves_links(tmp_path):
+    path = tmp_path / "happyday.db"
+    engine = create_db_engine(path)
+    try:
+        with engine.begin() as connection:
+            config = migration_config()
+            config.attributes["connection"] = connection
+            command.upgrade(config, "0003_csv_drafts")
+            connection.exec_driver_sql(
+                "INSERT INTO users (name, login, password_hash) VALUES ('Алёна', 'admin', 'test')"
+            )
+            connection.exec_driver_sql(
+                "INSERT INTO telegram_links (user_id, telegram_id) VALUES (1, 54321)"
+            )
+        backup = upgrade_database(path)
+        assert backup is not None
+        with engine.begin() as connection:
+            config.attributes["connection"] = connection
+            command.check(config)
+            command.downgrade(config, "0003_csv_drafts")
+            assert (
+                connection.exec_driver_sql("SELECT telegram_id FROM telegram_links").scalar()
+                == 54321
+            )
+            assert connection.exec_driver_sql("SELECT name FROM users").scalar() == "Алёна"
+    finally:
+        engine.dispose()

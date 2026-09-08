@@ -41,6 +41,6 @@ def test_journal_admin_only_and_filters(auth_app):
     assert page.status_code == 200
     assert "Ёжик 🎂" in page.text and "История попыток" in page.text
     assert "Результат неизвестен" in page.text
-    assert "еще не подключена" in page.text
+    assert "Отправка в Telegram недоступна" in page.text
     assert "Ёжик 🎂" not in client.get("/admin/deliveries?status=sent").text
     assert client.get("/admin/deliveries?status=invalid").status_code == 400

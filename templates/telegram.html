@@ -1,0 +1,18 @@
+{% extends "base.html" %}{% from "macros.html" import csrf_field %}
+{% block title %}Telegram · HappyDay{% endblock %}
+{% block content %}<section class="narrow"><a class="back-link" href="/profile">← Профиль</a>
+<div class="page-heading"><h1>Telegram</h1><p>Личные напоминания о днях рождения.</p></div>
+{% if notice %}<p class="alert alert-info" role="status">{{ notice }}</p>{% endif %}
+{% if bot_status != "ready" %}<p class="alert alert-secondary">{{ "Бот пока не настроен." if bot_status == "disabled" else "Соединение с ботом пока недоступно. Попробуйте обновить страницу позже." }}</p>{% endif %}
+{% if link %}<p>Telegram подключен. ID: {{ link.telegram_id }}</p>
+<form method="post" action="/profile/telegram/test" class="stack-form">{{ csrf_field(csrf) }}<button class="btn btn-primary" type="submit" {% if bot_status != 'ready' %}disabled{% endif %}>Отправить тестовое сообщение</button></form>
+<section class="danger-section"><h2>Отключить Telegram</h2><form action="/profile/telegram/unlink" method="post" class="stack-form">{{ csrf_field(csrf) }}
+<label class="check"><input type="checkbox" name="confirm" value="1" required> Отключить личные напоминания и доступ через бота</label><button class="btn btn-outline-danger" type="submit">Отключить Telegram</button></form></section>
+{% else %}
+{% if pairing and pairing.telegram_id %}<section><h2>Подтвердите аккаунт</h2><p>{{ pairing.display_name }} · Telegram ID: {{ pairing.telegram_id }}</p><p>Подтверждайте только свой аккаунт, с которого вы открыли ссылку.</p>
+<form method="post" action="/profile/telegram/confirm" class="stack-form">{{ csrf_field(csrf) }}<input type="hidden" name="request_hash" value="{{ pairing.token_hash }}"><input type="hidden" name="telegram_id" value="{{ pairing.telegram_id }}"><button class="btn btn-primary" type="submit">Это мой Telegram — подключить</button></form></section>
+{% elif pairing_url %}<p>Ссылка действует 10 минут и показывается один раз.</p><p><a class="btn btn-primary" href="{{ pairing_url }}" target="_blank" rel="noopener noreferrer">Открыть бота в Telegram</a></p><p>Нажмите «Запустить» в Telegram, затем вернитесь сюда.</p><p><a class="btn btn-outline-primary" href="/profile/telegram">Проверить запрос</a></p>
+{% elif pairing %}<p>Откройте ранее созданную ссылку в Telegram, затем обновите эту страницу.</p><p><a class="btn btn-outline-primary" href="/profile/telegram">Проверить запрос</a></p>{% endif %}
+{% if bot_status == 'ready' %}<form method="post" action="/profile/telegram/link" class="stack-form">{{ csrf_field(csrf) }}<button class="btn btn-outline-primary" type="submit">{{ "Создать новую ссылку" if pairing else "Подключить Telegram" }}</button></form>{% endif %}
+{% endif %}
+</section>{% endblock %}

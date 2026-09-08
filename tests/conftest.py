@@ -9,3 +9,5 @@ def isolated_settings(monkeypatch):
     for name in os.environ:
         if name.startswith("APP_"):
             monkeypatch.delenv(name)
+
+    monkeypatch.setenv("APP_TELEGRAM_TOKEN", "")

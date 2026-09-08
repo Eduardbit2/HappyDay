@@ -2,6 +2,7 @@
 {% block title %}Профиль · HappyDay{% endblock %}
 {% block content %}<section class="narrow"><h1>Профиль</h1>
 <p>{{ user.name }} · {{ user.login }}</p>
+<p><a class="quiet-link" href="/profile/telegram">Telegram и личные напоминания</a></p>
 <h2>Изменить пароль</h2><p>После изменения потребуется войти заново на всех устройствах.</p>
 <form method="post" action="/profile/password">{{ csrf_field(csrf) }}
 {{ field("current_password", "Текущий пароль", type="password", autocomplete="current-password", maxlength=128, error=error) }}

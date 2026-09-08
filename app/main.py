@@ -11,6 +11,8 @@ from starlette.middleware.trustedhost import TrustedHostMiddleware
 from starlette.staticfiles import StaticFiles
 
 from app.auth.routes import router as auth_router
+from app.bot.api import TelegramAPI
+from app.bot.polling import BotRuntime, run_bot
 from app.config import Settings
 from app.db.engine import create_db_engine
 from app.db.migrations import upgrade_database
@@ -22,6 +24,7 @@ from app.web.csv_routes import router as csv_router
 from app.web.deliveries import router as delivery_router
 from app.web.routes import router
 from app.web.security import SecurityHeadersMiddleware
+from app.web.telegram import router as telegram_router
 
 logger = logging.getLogger(__name__)
 
@@ -45,6 +48,12 @@ def create_app(
         )
         application.state.notification_engine = notification_engine
         stop = asyncio.Event()
+        api = TelegramAPI(settings.telegram_token) if settings.telegram_token else None
+        runtime = BotRuntime(api, engine, str(settings.base_url)) if api else None
+        application.state.telegram_runtime = runtime
+        bot_task = (
+            asyncio.create_task(run_bot(runtime, notification_engine, stop)) if runtime else None
+        )
         scheduler = (
             asyncio.create_task(run_scheduler(notification_engine, stop))
             if settings.scheduler_enabled
@@ -57,8 +66,12 @@ def create_app(
         finally:
             application.state.ready = False
             stop.set()
+            if bot_task is not None:
+                await bot_task
             if scheduler is not None:
                 await scheduler
+            if api is not None:
+                await run_in_threadpool(api.close)
             await run_in_threadpool(engine.dispose)
             logger.info("HappyDay остановлен")
 
@@ -78,6 +91,7 @@ def create_app(
     application.include_router(birthday_router)
     application.include_router(csv_router)
     application.include_router(delivery_router)
+    application.include_router(telegram_router)
     application.mount(
         "/static", StaticFiles(directory=str(Path(__file__).parents[1] / "static")), name="static"
     )

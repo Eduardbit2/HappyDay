@@ -6,7 +6,9 @@ from pathlib import Path
 from playwright.sync_api import sync_playwright
 from sqlalchemy.orm import Session
 
+from app.auth.security import token_hash
 from app.auth.service import bootstrap_admin
+from app.bot.linking import claim_pairing, issue_pairing
 from app.db.engine import create_db_engine
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -157,6 +159,31 @@ with sync_playwright() as playwright:
         page.get_by_role("button", name="Удалить окончательно", exact=True).click()
         page.wait_for_url(base_url + "/birthdays/archive")
         assert "Лёля CSV 🎂" not in page.locator("main").inner_text()
+        page.goto(base_url + "/profile/telegram")
+        page.wait_for_load_state("networkidle")
+        assert "Бот пока не настроен" in page.locator("main").inner_text()
+        # Имитация личного /start без сетевого соединения с Telegram.
+        cookie = next(
+            item["value"] for item in context.cookies() if item["name"] == "happyday_session"
+        )
+        pairing_engine = create_db_engine(data_dir / "happyday.db")
+        try:
+            with Session(pairing_engine.execution_options(sqlite_write=True)) as db, db.begin():
+                code = issue_pairing(db, 1, token_hash(cookie))
+                assert claim_pairing(db, code, 54321, "Алёна Telegram 🎂")
+        finally:
+            pairing_engine.dispose()
+        page.reload()
+        page.wait_for_load_state("networkidle")
+        page.get_by_role("heading", name="Подтвердите аккаунт", exact=True).wait_for()
+        page.screenshot(path=str(data_dir / "telegram-confirm-mobile.png"), full_page=True)
+        page.get_by_role("button", name="Это мой Telegram — подключить", exact=True).click()
+        page.wait_for_url(base_url + "/profile/telegram")
+        assert "Telegram подключен" in page.locator("main").inner_text()
+        page.get_by_label("Отключить личные напоминания и доступ через бота").check()
+        page.get_by_role("button", name="Отключить Telegram", exact=True).click()
+        page.wait_for_url(base_url + "/profile/telegram")
+        assert "Telegram подключен" not in page.locator("main").inner_text()
         for route in (
             "/",
             "/birthdays",
@@ -168,6 +195,7 @@ with sync_playwright() as playwright:
             "/birthdays/archive",
             detail_url.removeprefix(base_url) + "/edit",
             "/profile",
+            "/profile/telegram",
             "/admin",
             "/admin/deliveries",
         ):

@@ -280,3 +280,19 @@ def test_scheduler_survives_failure_and_stops():
         assert engine.calls == 2
 
     asyncio.run(scenario())
+
+
+def test_sender_snapshot_survives_runtime_disconnect(queue, monkeypatch):
+    engine, _clock, sender = queue
+    engine.enqueue()
+    original_claim = engine.claim
+
+    def claim_and_disconnect():
+        message = original_claim()
+        engine.sender = None
+        return message
+
+    monkeypatch.setattr(engine, "claim", claim_and_disconnect)
+    assert engine.dispatch_one()
+    assert len(sender.messages) == 1
+    assert rows(engine)[0].status == "sent"

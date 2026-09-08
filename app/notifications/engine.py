@@ -253,13 +253,14 @@ class NotificationEngine:
             )
 
     def dispatch_one(self) -> bool:
-        if self.sender is None:
+        sender = self.sender
+        if sender is None:
             return False
         message = self.claim()
         if message is None:
             return False
         try:
-            self.sender.send(message)
+            sender.send(message)
         except RetryableError as error:
             self.finish(
                 message,
