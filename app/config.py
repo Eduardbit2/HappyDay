@@ -18,6 +18,8 @@ class Settings(BaseSettings):
     data_dir: Path = Path("data")
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = "INFO"
 
+    scheduler_enabled: bool = True
+
     session_hours: int = Field(default=168, ge=1, le=720)
 
     @field_validator("allowed_hosts")

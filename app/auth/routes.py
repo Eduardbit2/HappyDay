@@ -15,7 +15,7 @@ from app.auth.web import (
     redirect,
     render,
 )
-from app.db.models import Invitation, User
+from app.db.models import Invitation, TelegramLink, User
 
 router = APIRouter(dependencies=[Depends(protected_form)])
 
@@ -158,9 +158,17 @@ def join(
 
 def admin_page(request, ctx, *, status=200, **values):
     users = list(ctx.db.scalars(select(User).order_by(User.id)))
+    linked_users = set(ctx.db.scalars(select(TelegramLink.user_id)))
     invites = list(ctx.db.scalars(select(Invitation).order_by(Invitation.id.desc()).limit(30)))
     return render(
-        request, ctx, "admin.html", status=status, users=users, invitations=invites, **values
+        request,
+        ctx,
+        "admin.html",
+        status=status,
+        users=users,
+        invitations=invites,
+        linked_users=linked_users,
+        **values,
     )
 
 

@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block title %}Журнал напоминаний · HappyDay{% endblock %}
+{% block content %}<a class="back-link" href="/admin">← Семья</a>
+<div class="page-heading"><h1>Журнал напоминаний</h1><p>Последние 100 доставок. Время указано по Москве.</p></div>
+{% if not transport_ready %}<p class="alert alert-secondary">Отправка в Telegram еще не подключена. Очередь рассчитывается для активных пользователей с привязкой.</p>{% endif %}
+<form method="get" class="stack-form narrow"><div class="field"><label for="status">Статус</label><select class="form-select" id="status" name="status"><option value="">Все статусы</option>{% for value, label in labels.items() %}<option value="{{ value }}" {% if selected_status == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></div><button class="btn btn-primary" type="submit">Показать</button></form>
+{% for delivery, birthday_name, user_name in rows %}<article class="member"><h2>{{ birthday_name }}</h2>
+<p>{{ user_name }} · {{ delivery.occurrence_date.strftime('%d.%m.%Y') }} · {{ "В день рождения" if delivery.days_before == 0 else "За " ~ delivery.days_before ~ " дн." }}</p>
+<p><strong>{{ labels[delivery.status] }}</strong> · Попыток: {{ delivery.attempts }}</p>
+{% if delivery.sent_at %}<p>Доставлено: {{ delivery.sent_at|moscow_time }}</p>{% endif %}
+{% if delivery.status == 'retry' %}<p>Следующая попытка: {{ delivery.next_attempt_at|moscow_time }}</p>{% endif %}
+{% if delivery.last_error %}<p>{{ delivery.last_error }}</p>{% endif %}
+{% if attempts.get(delivery.id) %}<details><summary>История попыток</summary><ul>{% for attempt in attempts[delivery.id] %}<li>{{ attempt.attempted_at|moscow_time }} · {{ labels[attempt.outcome] }}{% if attempt.error %} · {{ attempt.error }}{% endif %}</li>{% endfor %}</ul></details>{% endif %}</article>
+{% else %}<section class="empty-state"><h2>Доставок пока нет</h2><p>Здесь появятся результаты отправки напоминаний.</p></section>{% endfor %}
+{% endblock %}

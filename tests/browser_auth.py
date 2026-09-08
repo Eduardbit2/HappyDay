@@ -169,6 +169,7 @@ with sync_playwright() as playwright:
             detail_url.removeprefix(base_url) + "/edit",
             "/profile",
             "/admin",
+            "/admin/deliveries",
         ):
             page.goto(base_url + route)
             page.wait_for_load_state("networkidle")
