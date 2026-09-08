@@ -1,14 +1,17 @@
 """Личные команды. Семейные данные доступны только активной подтвержденной привязке."""
 
+import re
 from dataclasses import dataclass
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
 from sqlalchemy import select
 
+from app.auth.security import utc_now
 from app.birthdays.service import age_in_year, normalize_text, occurrence_in_year
+from app.bot import wizard
 from app.bot.linking import claim_pairing
-from app.db.models import Birthday, Group, TelegramLink, User
+from app.db.models import Birthday, BotDraft, Group, TelegramLink, User
 
 MENU = {
     "keyboard": [
@@ -29,10 +32,18 @@ class Reply:
 
 
 def _handle_update(db, update, base_url):
-    message = update.get("message")
+    callback_query = update.get("callback_query")
+    is_callback = isinstance(callback_query, dict)
+    callback_data = callback_query.get("data", "") if is_callback else None
+    if is_callback and (
+        not isinstance(callback_data, str) or len(callback_data.encode("utf-8")) > 64
+    ):
+        return []
+    message = callback_query.get("message") if is_callback else update.get("message")
     if not isinstance(message, dict):
         return []
-    chat, sender = message.get("chat", {}), message.get("from", {})
+    chat = message.get("chat", {})
+    sender = callback_query.get("from", {}) if is_callback else message.get("from", {})
     if not isinstance(chat, dict) or not isinstance(sender, dict):
         return []
     chat_id = chat.get("id")
@@ -45,7 +56,7 @@ def _handle_update(db, update, base_url):
         or sender.get("is_bot") is not False
     ):
         return []
-    text = message.get("text", "")
+    text = "" if is_callback else message.get("text", "")
     if not isinstance(text, str):
         return []
     if text.startswith("/start "):
@@ -75,27 +86,80 @@ def _handle_update(db, update, base_url):
                 {"remove_keyboard": True},
             )
         ]
-    if text in ("/start", "/menu"):
-        return [Reply(chat_id, "HappyDay 🎂 Выберите действие.", MENU)]
-    if text in ("/test", "Тест"):
-        return [Reply(chat_id, "Telegram подключен. Тестовое сообщение HappyDay 🎂", MENU)]
-    if text == "🎂 Добавить":
+    if text in ("/start", "/menu", "/cancel", wizard.CANCEL):
+        wizard.discard(db, user.id)
         return [
             Reply(
                 chat_id,
-                "Добавьте день рождения в HappyDay.",
-                {
-                    "inline_keyboard": [
-                        [
-                            {
-                                "text": "🌐 Добавить в браузере",
-                                "url": base_url.rstrip("/") + "/birthdays/new",
-                            }
-                        ]
-                    ]
-                },
+                "Действие отменено. Выберите действие."
+                if text in ("/cancel", wizard.CANCEL)
+                else "HappyDay 🎂 Выберите действие.",
+                MENU,
             )
         ]
+    draft = db.get(BotDraft, user.id)
+    expired = bool(draft and (draft.expires_at <= utc_now() or draft.telegram_id != chat_id))
+    if expired:
+        db.delete(draft)
+        db.flush()
+        draft = None
+    try:
+        if is_callback:
+            match = re.fullmatch(r"(edit|archive):([1-9][0-9]{0,17})", callback_data)
+            if match:
+                if draft:
+                    raise ValueError("Сначала завершите черновик или отправьте /cancel.")
+                mode, birthday_id = match.groups()
+                draft = wizard.start(db, user.id, chat_id, birthday_id=int(birthday_id), mode=mode)
+                message, markup = wizard.prompt(db, draft)
+                return [Reply(chat_id, message, markup)]
+            match = re.fullmatch(
+                r"wf:([A-Za-z0-9_-]{8}):([0-9]{1,9}):(save|duplicate|back|cancel)", callback_data
+            )
+            if not match or not draft or match[1] != draft.nonce or int(match[2]) != draft.version:
+                return [
+                    Reply(
+                        chat_id,
+                        "Кнопка устарела. Используйте последний шаг или начните заново.",
+                        MENU if not draft else None,
+                    )
+                ]
+            message, markup, done = wizard.advance(db, draft, action=match[3])
+            return [Reply(chat_id, message, MENU if done else markup)]
+        if text in ("🎂 Добавить", "/add"):
+            draft = draft or wizard.start(db, user.id, chat_id)
+            message, markup = wizard.prompt(db, draft)
+            return [Reply(chat_id, message, markup)]
+        if expired:
+            return [
+                Reply(
+                    chat_id,
+                    "Черновик истек через 15 минут. Начните заново через «🎂 Добавить».",
+                    MENU,
+                )
+            ]
+        if draft:
+            if text in ("📅 Ближайшие", "👥 Все", "🏷 Группы", "⚙️ Настройки", "/test"):
+                raise ValueError("Сначала завершите черновик или отправьте /cancel.")
+            if not text:
+                message, markup = wizard.prompt(db, draft)
+                return [Reply(chat_id, "На этом шаге нужен текст.\n" + message, markup)]
+            message, markup, done = wizard.advance(db, draft, text=text)
+            return [Reply(chat_id, message, MENU if done else markup)]
+        quick = wizard.quick_values(text)
+        if quick:
+            draft = wizard.start(db, user.id, chat_id, quick=quick)
+            message, markup = wizard.prompt(db, draft)
+            return [Reply(chat_id, message, markup)]
+    except ValueError as error:
+        if draft:
+            message, markup = wizard.prompt(db, draft)
+            return [Reply(chat_id, str(error) + "\n\n" + message, markup)]
+        return [Reply(chat_id, str(error), MENU)]
+    if text in ("/test", "Тест"):
+        return [Reply(chat_id, "Telegram подключен. Тестовое сообщение HappyDay 🎂", MENU)]
+    if not text:
+        return [Reply(chat_id, "Для поиска напишите имя или выберите действие.", MENU)]
     if text == "⚙️ Настройки":
         return [
             Reply(
@@ -144,11 +208,15 @@ def _handle_update(db, update, base_url):
                 {
                     "inline_keyboard": [
                         [
+                            {"text": "✏️ Изменить", "callback_data": f"edit:{person.id}"},
+                            {"text": "🗑 В архив", "callback_data": f"archive:{person.id}"},
+                        ],
+                        [
                             {
                                 "text": "🌐 Открыть",
                                 "url": f"{base_url.rstrip('/')}/birthdays/{person.id}",
                             }
-                        ]
+                        ],
                     ]
                 },
             )

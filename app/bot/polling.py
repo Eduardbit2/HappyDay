@@ -38,7 +38,12 @@ class BotRuntime:
             offset = cursor.next_update_id if cursor else 0
         updates = self.api.call(
             "getUpdates",
-            {"offset": offset, "timeout": 20, "limit": 50, "allowed_updates": ["message"]},
+            {
+                "offset": offset,
+                "timeout": 20,
+                "limit": 50,
+                "allowed_updates": ["message", "callback_query"],
+            },
         )
         if not isinstance(updates, list):
             raise ValueError("Некорректный ответ Telegram")
@@ -60,6 +65,14 @@ class BotRuntime:
                     continue
                 replies = handle_update(db, update, self.base_url)
                 cursor.next_update_id = update_id + 1
+            callback_query = update.get("callback_query")
+            if isinstance(callback_query, dict) and isinstance(callback_query.get("id"), str):
+                try:
+                    self.api.call(
+                        "answerCallbackQuery", {"callback_query_id": callback_query["id"]}
+                    )
+                except Exception:
+                    logger.warning("Подтверждение кнопки Telegram не доставлено")
             for reply in replies:
                 if should_stop():
                     break

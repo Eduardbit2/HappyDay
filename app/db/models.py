@@ -223,3 +223,16 @@ class BotCursor(Base):
     __tablename__ = "bot_cursors"
     bot_id: Mapped[str] = mapped_column(String(20), primary_key=True)
     next_update_id: Mapped[int] = mapped_column(Integer)
+
+
+class BotDraft(Base):
+    __tablename__ = "bot_drafts"
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("telegram_links.user_id", ondelete="CASCADE"), primary_key=True
+    )
+    telegram_id: Mapped[int] = mapped_column(Integer)
+    nonce: Mapped[str] = mapped_column(String(16))
+    version: Mapped[int] = mapped_column(Integer)
+    step: Mapped[str] = mapped_column(String(16))
+    payload: Mapped[str] = mapped_column(Text)
+    expires_at: Mapped[datetime] = mapped_column(DateTime)
