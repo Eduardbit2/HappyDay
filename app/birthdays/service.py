@@ -164,3 +164,31 @@ def update_group(
     group.name, group.icon, group.color, group.sort_order = name, icon, color, sort_order
     session.flush()
     return group
+
+
+def plural(number: int, forms: tuple[str, str, str]) -> str:
+    return (
+        forms[2]
+        if 11 <= number % 100 <= 14
+        else forms[0]
+        if number % 10 == 1
+        else forms[1]
+        if 2 <= number % 10 <= 4
+        else forms[2]
+    )
+
+
+def next_occurrence(birthday: Birthday, today: date) -> date:
+    occurrence = occurrence_in_year(birthday, today.year)
+    return occurrence if occurrence >= today else occurrence_in_year(birthday, today.year + 1)
+
+
+def countdown(occurrence: date, today: date) -> str:
+    days = (occurrence - today).days
+    if days < 0:
+        raise ValueError("Дата события уже прошла")
+    if days == 0:
+        return "Сегодня"
+    if days == 1:
+        return "Завтра"
+    return f"Через {days} {plural(days, ('день', 'дня', 'дней'))}"

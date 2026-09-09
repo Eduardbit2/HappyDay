@@ -207,6 +207,15 @@ with sync_playwright() as playwright:
                     route,
                     width,
                 )
+        page.goto(base_url + "/birthdays")
+        page.wait_for_load_state("networkidle")
+        assert page.locator(".row-countdown").count() > 0
+        for label in page.locator(".row-countdown").all_text_contents():
+            assert label == "Сегодня" or label == "Завтра" or label.startswith("Через ")
+        for width in (320, 1280):
+            page.set_viewport_size({"width": width, "height": 900})
+            assert page.evaluate("document.documentElement.scrollWidth <= innerWidth")
+            page.screenshot(path=str(data_dir / f"countdown-{width}.png"), full_page=True)
         page.emulate_media(reduced_motion="reduce")
         assert page.locator(".workspace").evaluate("e=>getComputedStyle(e).animationName") == "none"
         assert not errors, errors

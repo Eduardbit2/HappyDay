@@ -167,3 +167,5 @@ details[open] { animation: appear .15s ease; }
 
 .group-mark::before { content:""; display:inline-block; width:8px; height:8px; border-radius:50%; background:var(--group-color,#8A8178); margin-right:6px; vertical-align:middle; }
 .btn-outline-primary { --bs-btn-color:var(--hd-green); --bs-btn-border-color:var(--hd-green); --bs-btn-hover-bg:var(--hd-green); --bs-btn-hover-border-color:var(--hd-green); }
+
+.row-countdown { display: block; margin-top: 4px; font-family: var(--bs-body-font-family); font-size: 14px; line-height: 1.4; color: var(--hd-green); }

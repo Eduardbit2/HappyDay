@@ -14,12 +14,14 @@ from app.birthdays.service import (
     DuplicateBirthdayError,
     age_in_year,
     archive_birthday,
+    countdown,
     create_birthday,
     create_group,
     delete_birthday,
     delete_group,
+    next_occurrence,
     normalize_text,
-    occurrence_in_year,
+    plural,
     restore_birthday,
     update_group,
 )
@@ -45,28 +47,13 @@ MONTHS = (
 SHORT_MONTHS = ("янв", "фев", "мар", "апр", "май", "июн", "июл", "авг", "сен", "окт", "ноя", "дек")
 
 
-def plural(number: int, forms: tuple[str, str, str]) -> str:
-    return (
-        forms[2]
-        if 11 <= number % 100 <= 14
-        else forms[0]
-        if number % 10 == 1
-        else forms[1]
-        if 2 <= number % 10 <= 4
-        else forms[2]
-    )
-
-
 def event_rows(ctx: AuthContext, today: date | None = None, *, archived: bool = False):
     today = today or datetime.now(ZoneInfo("Europe/Moscow")).date()
     rows = []
     for person, group in ctx.db.execute(
         select(Birthday, Group).join(Group).where(Birthday.is_active.is_(not archived))
     ):
-        occurrence = occurrence_in_year(person, today.year)
-        if occurrence < today:
-            occurrence = occurrence_in_year(person, today.year + 1)
-        days = (occurrence - today).days
+        occurrence = next_occurrence(person, today)
         age = age_in_year(person, occurrence.year)
         rows.append(
             {
@@ -76,11 +63,7 @@ def event_rows(ctx: AuthContext, today: date | None = None, *, archived: bool = 
                 "day": f"{occurrence.day:02}",
                 "month": MONTHS[occurrence.month - 1],
                 "short_month": SHORT_MONTHS[occurrence.month - 1],
-                "when": "Сегодня"
-                if days == 0
-                else "Завтра"
-                if days == 1
-                else f"Через {days} {plural(days, ('день', 'дня', 'дней'))}",
+                "when": countdown(occurrence, today),
                 "age": f"{age} {plural(age, ('год', 'года', 'лет'))}" if age is not None else None,
             }
         )

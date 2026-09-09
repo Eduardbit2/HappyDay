@@ -8,7 +8,7 @@ from zoneinfo import ZoneInfo
 from sqlalchemy import select
 
 from app.auth.security import utc_now
-from app.birthdays.service import age_in_year, normalize_text, occurrence_in_year
+from app.birthdays.service import age_in_year, countdown, next_occurrence, normalize_text
 from app.bot import wizard
 from app.bot.linking import claim_pairing
 from app.db.models import Birthday, BotDraft, Group, TelegramLink, User
@@ -181,9 +181,7 @@ def _handle_update(db, update, base_url):
     for person in db.scalars(select(Birthday).where(Birthday.is_active.is_(True))):
         if query and query not in person.name.casefold():
             continue
-        occurrence = occurrence_in_year(person, today.year)
-        if occurrence < today:
-            occurrence = occurrence_in_year(person, today.year + 1)
+        occurrence = next_occurrence(person, today)
         events.append((occurrence, person))
     events.sort(key=lambda event: (event[0], event[1].name.casefold(), event[1].id))
     if not events:
@@ -201,6 +199,7 @@ def _handle_update(db, update, base_url):
         label = f"{person.name}\n{occurrence:%d.%m.%Y}" + (
             f" · Возраст: {age}" if age is not None else ""
         )
+        label += "\n" + countdown(occurrence, today)
         replies.append(
             Reply(
                 chat_id,
