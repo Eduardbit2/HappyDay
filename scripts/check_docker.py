@@ -24,7 +24,7 @@ def wait_ready(name, base_url):
                 ready = json.load(response) == {"status": "ready"}
             if ready and state.get("Health", {}).get("Status") == "healthy":
                 return
-        except (urllib.error.URLError, TimeoutError):
+        except (urllib.error.URLError, TimeoutError, ConnectionError):
             pass
         time.sleep(1)
     raise RuntimeError("Test container did not become healthy")
@@ -90,6 +90,10 @@ def main():
             "fetchone() == ('Ёжики 🎂',); db.close()",
         )
         print("Docker startup, health, UTF-8, non-root and restart: OK")
+    except Exception:
+        if started:
+            print(docker("logs", "--tail", "60", name))
+        raise
     finally:
         if started:
             docker("rm", "--force", name)
