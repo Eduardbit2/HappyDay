@@ -1,9 +1,10 @@
 """Браузерная проверка на отдельной базе в test-results; сервер запускается извне."""
 
 import os
+import re
 from pathlib import Path
 
-from playwright.sync_api import sync_playwright
+from playwright.sync_api import expect, sync_playwright
 from sqlalchemy.orm import Session
 
 from app.auth.security import token_hash
@@ -133,7 +134,7 @@ with sync_playwright() as playwright:
                 "buffer": csv_text.encode("utf-8-sig"),
             }
         )
-        page.wait_for_function("document.getElementById('csv').value.includes('Лёля CSV')")
+        expect(page.locator("#csv")).to_have_value(re.compile("Лёля CSV"))
         page.get_by_role("button", name="Предпросмотр", exact=True).click()
         page.get_by_role("heading", name="Предпросмотр CSV", exact=True).wait_for()
         page.screenshot(path=str(data_dir / "csv-preview-mobile.png"), full_page=True)
