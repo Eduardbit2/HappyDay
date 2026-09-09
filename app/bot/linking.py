@@ -5,7 +5,14 @@ from datetime import timedelta
 from sqlalchemy import delete, select, update
 
 from app.auth.security import new_token, token_hash, utc_now
-from app.db.models import AuthSession, Delivery, TelegramLink, TelegramPairRequest, User
+from app.db.models import (
+    AuthSession,
+    Delivery,
+    EveningReminder,
+    TelegramLink,
+    TelegramPairRequest,
+    User,
+)
 
 
 def issue_pairing(db, user_id, session_hash):
@@ -85,8 +92,9 @@ def confirm_pairing(db, user_id, request_hash, telegram_id):
 def unlink(db, user_id):
     db.execute(delete(TelegramPairRequest).where(TelegramPairRequest.user_id == user_id))
     db.execute(delete(TelegramLink).where(TelegramLink.user_id == user_id))
-    db.execute(
-        update(Delivery)
-        .where(Delivery.user_id == user_id, Delivery.status.in_(("pending", "retry")))
-        .values(status="cancelled", last_error="Telegram отключен")
-    )
+    for model in (Delivery, EveningReminder):
+        db.execute(
+            update(model)
+            .where(model.user_id == user_id, model.status.in_(("pending", "retry")))
+            .values(status="cancelled", last_error="Telegram отключен")
+        )

@@ -9,7 +9,7 @@ from zoneinfo import ZoneInfo
 from sqlalchemy import delete, select, update
 from sqlalchemy.orm import Session
 
-from app.db.models import SYSTEM_GROUP_ID, Birthday, Delivery, Group
+from app.db.models import SYSTEM_GROUP_ID, Birthday, Delivery, EveningReminder, Group
 
 
 class DuplicateBirthdayError(ValueError):
@@ -121,14 +121,15 @@ def age_in_year(birthday: Birthday, year: int) -> int | None:
 
 
 def cancel_pending_deliveries(session: Session, birthday_id: int) -> None:
-    session.execute(
-        update(Delivery)
-        .where(
-            Delivery.birthday_id == birthday_id,
-            Delivery.status.in_(("pending", "retry", "sending")),
+    for model in (Delivery, EveningReminder):
+        session.execute(
+            update(model)
+            .where(
+                model.birthday_id == birthday_id,
+                model.status.in_(("pending", "retry", "sending")),
+            )
+            .values(status="cancelled")
         )
-        .values(status="cancelled")
-    )
 
 
 def restore_birthday(session: Session, birthday_id: int) -> None:

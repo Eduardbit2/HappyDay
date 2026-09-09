@@ -63,8 +63,18 @@ class TelegramAPI:
         return result
 
     def send(self, message: Message):
+        keyboard = [[{"text": "🌐 Открыть", "url": message.url}]]
+        if message.snooze_callback:
+            keyboard.append(
+                [
+                    {
+                        "text": "⏰ Напомнить вечером",
+                        "callback_data": message.snooze_callback,
+                    }
+                ]
+            )
         self.send_text(
             message.telegram_id,
             message.text,
-            {"inline_keyboard": [[{"text": "🌐 Открыть", "url": message.url}]]},
+            {"inline_keyboard": keyboard},
         )

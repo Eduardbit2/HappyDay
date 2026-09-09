@@ -18,6 +18,7 @@ from app.db.engine import create_db_engine
 from app.db.migrations import upgrade_database
 from app.logging import configure_logging
 from app.notifications.engine import NotificationEngine, Sender
+from app.notifications.evening import EveningEngine
 from app.scheduler.runner import run_scheduler
 from app.web.birthdays import router as birthday_router
 from app.web.csv_routes import router as csv_router
@@ -47,6 +48,10 @@ def create_app(
             engine, base_url=str(settings.base_url), sender=notification_sender
         )
         application.state.notification_engine = notification_engine
+        evening_engine = EveningEngine(
+            engine, base_url=str(settings.base_url), sender=notification_sender
+        )
+        application.state.evening_engine = evening_engine
         stop = asyncio.Event()
         api = TelegramAPI(settings.telegram_token) if settings.telegram_token else None
         runtime = BotRuntime(api, engine, str(settings.base_url)) if api else None
@@ -55,7 +60,9 @@ def create_app(
             asyncio.create_task(run_bot(runtime, notification_engine, stop)) if runtime else None
         )
         scheduler = (
-            asyncio.create_task(run_scheduler(notification_engine, stop))
+            asyncio.create_task(
+                run_scheduler(notification_engine, stop, evening_engine=evening_engine)
+            )
             if settings.scheduler_enabled
             else None
         )

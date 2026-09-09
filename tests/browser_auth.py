@@ -198,6 +198,7 @@ with sync_playwright() as playwright:
             "/profile/telegram",
             "/admin",
             "/admin/deliveries",
+            "/admin/deliveries?kind=evening",
         ):
             page.goto(base_url + route)
             page.wait_for_load_state("networkidle")

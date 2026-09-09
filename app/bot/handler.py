@@ -12,6 +12,7 @@ from app.birthdays.service import age_in_year, countdown, next_occurrence, norma
 from app.bot import wizard
 from app.bot.linking import claim_pairing
 from app.db.models import Birthday, BotDraft, Group, TelegramLink, User
+from app.notifications.evening import request_evening
 
 MENU = {
     "keyboard": [
@@ -86,6 +87,15 @@ def _handle_update(db, update, base_url):
                 {"remove_keyboard": True},
             )
         ]
+    if is_callback and callback_data.startswith("evening:"):
+        raw_id = callback_data.removeprefix("evening:")
+        if not re.fullmatch(r"[1-9][0-9]{0,18}", raw_id):
+            return [Reply(chat_id, "Кнопка напоминания недействительна.")]
+        try:
+            result = request_evening(db, user.id, int(raw_id), datetime.now(ZoneInfo("UTC")))
+        except ValueError as error:
+            result = str(error)
+        return [Reply(chat_id, result)]
     if text in ("/start", "/menu", "/cancel", wizard.CANCEL):
         wizard.discard(db, user.id)
         return [

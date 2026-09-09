@@ -43,6 +43,7 @@ class Message:
     telegram_id: int
     text: str
     url: str
+    snooze_callback: str | None = None
 
 
 class Sender(Protocol):
@@ -81,10 +82,14 @@ def message_for(delivery, person, group, link, base_url):
         link.telegram_id,
         "\n".join(lines),
         f"{base_url.rstrip('/')}/birthdays/{person.id}",
+        f"evening:{delivery.id}",
     )
 
 
 class NotificationEngine:
+    delivery_model = Delivery
+    attempt_model = DeliveryAttempt
+
     def __init__(
         self,
         db_engine,
@@ -140,11 +145,20 @@ class NotificationEngine:
                         inserted += result.rowcount
         return inserted
 
+    @staticmethod
+    def delivery_window_open(delivery, now):
+        return window_open(delivery.occurrence_date, delivery.days_before, now)
+
+    def build_message(self, delivery, person, group, link):
+        return message_for(delivery, person, group, link, self.base_url)
+
     def maintain(self):
         now = utc(self.clock())
         with self.session() as db, db.begin():
             for delivery in db.scalars(
-                select(Delivery).where(Delivery.status.in_(("pending", "retry", "sending")))
+                select(self.delivery_model).where(
+                    self.delivery_model.status.in_(("pending", "retry", "sending"))
+                )
             ):
                 if delivery.status == "sending":
                     if delivery.next_attempt_at <= now.replace(tzinfo=None):
@@ -153,7 +167,7 @@ class NotificationEngine:
                             "Результат прерванной отправки неизвестен; повтор отключен"
                         )
                         db.add(
-                            DeliveryAttempt(
+                            self.attempt_model(
                                 delivery_id=delivery.id,
                                 attempt_number=delivery.attempts,
                                 outcome="failed",
@@ -169,8 +183,8 @@ class NotificationEngine:
                     delivery.status = "cancelled"
                     delivery.last_error = "Окно отправки закрыто или запись/получатель недоступны"
 
-    @staticmethod
-    def eligible(delivery, person, user, link, now):
+    @classmethod
+    def eligible(cls, delivery, person, user, link, now):
         return bool(
             person
             and person.is_active
@@ -179,19 +193,19 @@ class NotificationEngine:
             and link
             and occurrence_in_year(person, delivery.occurrence_date.year)
             == delivery.occurrence_date
-            and window_open(delivery.occurrence_date, delivery.days_before, now)
+            and cls.delivery_window_open(delivery, now)
         )
 
     def claim(self) -> Message | None:
         now = utc(self.clock())
         with self.session() as db, db.begin():
             candidates = db.scalars(
-                select(Delivery)
+                select(self.delivery_model)
                 .where(
-                    Delivery.status.in_(("pending", "retry")),
-                    Delivery.next_attempt_at <= now.replace(tzinfo=None),
+                    self.delivery_model.status.in_(("pending", "retry")),
+                    self.delivery_model.next_attempt_at <= now.replace(tzinfo=None),
                 )
-                .order_by(Delivery.next_attempt_at, Delivery.id)
+                .order_by(self.delivery_model.next_attempt_at, self.delivery_model.id)
             )
             for delivery in candidates:
                 person = db.get(Birthday, delivery.birthday_id)
@@ -208,9 +222,7 @@ class NotificationEngine:
                 delivery.status = "sending"
                 delivery.attempts += 1
                 delivery.next_attempt_at = (now + LEASE).replace(tzinfo=None)
-                return message_for(
-                    delivery, person, db.get(Group, person.group_id), link, self.base_url
-                )
+                return self.build_message(delivery, person, db.get(Group, person.group_id), link)
         return None
 
     def finish(
@@ -218,7 +230,7 @@ class NotificationEngine:
     ):
         now = utc(self.clock())
         with self.session() as db, db.begin():
-            delivery = db.get(Delivery, message.delivery_id)
+            delivery = db.get(self.delivery_model, message.delivery_id)
             if (
                 not delivery
                 or delivery.attempts != message.attempt
@@ -230,8 +242,8 @@ class NotificationEngine:
             if outcome == "retry":
                 delay = max(BACKOFF_SECONDS[min(message.attempt - 1, 3)], retry_after)
                 retry_at = now + timedelta(seconds=min(delay, 86_400))
-                if message.attempt >= MAX_ATTEMPTS or not window_open(
-                    delivery.occurrence_date, delivery.days_before, retry_at
+                if message.attempt >= MAX_ATTEMPTS or not self.delivery_window_open(
+                    delivery, retry_at
                 ):
                     outcome, status = "failed", "failed"
                     error = "Исчерпаны попытки или окно повторной отправки"
@@ -243,7 +255,7 @@ class NotificationEngine:
             if outcome == "sent":
                 delivery.sent_at = now.replace(tzinfo=None)
             db.add(
-                DeliveryAttempt(
+                self.attempt_model(
                     delivery_id=delivery.id,
                     attempt_number=message.attempt,
                     outcome=outcome,

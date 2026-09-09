@@ -236,3 +236,51 @@ class BotDraft(Base):
     step: Mapped[str] = mapped_column(String(16))
     payload: Mapped[str] = mapped_column(Text)
     expires_at: Mapped[datetime] = mapped_column(DateTime)
+
+
+class EveningReminder(Base):
+    __tablename__ = "evening_reminders"
+    __table_args__ = (
+        CheckConstraint("days_before IN (0, 1, 7)", name="days_before"),
+        CheckConstraint(
+            "status IN ('pending', 'sending', 'sent', 'retry', 'failed', 'cancelled')",
+            name="status",
+        ),
+        CheckConstraint("attempts >= 0", name="attempts"),
+        CheckConstraint("status <> 'sent' OR sent_at IS NOT NULL", name="sent_at"),
+        Index("ix_evening_reminders_due", "status", "next_attempt_at"),
+    )
+    id: Mapped[int] = mapped_column(primary_key=True)
+    source_delivery_id: Mapped[int] = mapped_column(
+        ForeignKey("deliveries.id", ondelete="CASCADE"), unique=True
+    )
+    due_at: Mapped[datetime] = mapped_column(DateTime)
+    birthday_id: Mapped[int] = mapped_column(ForeignKey("birthdays.id", ondelete="RESTRICT"))
+    occurrence_date: Mapped[date] = mapped_column(Date)
+    days_before: Mapped[int] = mapped_column(Integer)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="RESTRICT"))
+    status: Mapped[str] = mapped_column(String(12), server_default="pending")
+    attempts: Mapped[int] = mapped_column(Integer, server_default="0")
+    next_attempt_at: Mapped[datetime] = mapped_column(DateTime)
+    sent_at: Mapped[datetime | None] = mapped_column(DateTime)
+    last_error: Mapped[str | None] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.current_timestamp())
+
+
+class EveningAttempt(Base):
+    """История результатов отдельных попыток доставки."""
+
+    __tablename__ = "evening_attempts"
+    __table_args__ = (
+        CheckConstraint("attempt_number > 0", name="attempt_number"),
+        CheckConstraint("outcome IN ('sent', 'retry', 'failed')", name="outcome"),
+    )
+    delivery_id: Mapped[int] = mapped_column(
+        ForeignKey("evening_reminders.id", ondelete="CASCADE"), primary_key=True
+    )
+    attempt_number: Mapped[int] = mapped_column(Integer, primary_key=True)
+    outcome: Mapped[str] = mapped_column(String(10))
+    error: Mapped[str | None] = mapped_column(Text)
+    attempted_at: Mapped[datetime] = mapped_column(
+        DateTime, server_default=func.current_timestamp()
+    )
