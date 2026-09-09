@@ -42,7 +42,8 @@ def login(client, login="admin", password=PASSWORD):
 
 @pytest.fixture
 def auth_app(tmp_path):
-    app = create_app(Settings(_env_file=None, data_dir=tmp_path))
+    # Web/bot tests drive notification engines with their own clocks.
+    app = create_app(Settings(_env_file=None, data_dir=tmp_path, scheduler_enabled=False))
     with TestClient(app, base_url="http://localhost") as client:
         with Session(app.state.db_engine.execution_options(sqlite_write=True)) as db, db.begin():
             service.bootstrap_admin(db, name="Алёна Ёжик", login="Admin", password=PASSWORD)
