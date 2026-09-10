@@ -11,6 +11,8 @@
 При старте миграции применяются автоматически с backup существующей базы.
 Добавлены GitHub Actions и проверочная Docker-сборка; приемка развертывания
 на Synology остается отдельным этапом. [Проверки CI](docs/ci.md).
+Подготовлены [Compose и инструкция Synology/Dockhand](docs/deployment.md),
+а также [отчет мобильной приемки](docs/design/mobile-acceptance.md).
 
 Визуальная система: [дизайн и проверка](docs/design/system.md).
 
@@ -72,7 +74,8 @@ $testRunPath = Join-Path (Get-Location) ("test-results/pytest-" + [guid]::NewGui
 `/health/live` возвращает `200`, пока сервер отвечает.
 `/health/ready` возвращает `200` после старта и `503`, если приложение не готово.
 Readiness проверяет lifecycle, доступность SQLite и актуальность revision.
-Endpoint пока не сообщает о готовности Telegram.
+Endpoint пока не сообщает о готовности Telegram. В production служебные
+health-endpoint доступны только с loopback внутри контейнера.
 
 ## Настройки
 

@@ -209,6 +209,32 @@ with sync_playwright() as playwright:
                     route,
                     width,
                 )
+        for route in ("/birthdays", "/birthdays/new", "/settings", "/profile", "/admin"):
+            page.goto(base_url + route)
+            page.wait_for_load_state("networkidle")
+            page.set_viewport_size({"width": 640, "height": 900})
+            page.evaluate("document.documentElement.style.zoom = '2'")
+            assert page.evaluate("document.documentElement.scrollWidth <= innerWidth"), route
+            page.screenshot(
+                path=str(data_dir / ("zoom-" + route.strip("/").replace("/", "-") + ".png")),
+                full_page=True,
+            )
+            page.evaluate("document.documentElement.style.zoom = ''")
+        page.set_viewport_size({"width": 390, "height": 350})
+        page.goto(base_url + "/birthdays/new")
+        page.wait_for_load_state("networkidle")
+        page.get_by_label("Имя и фамилия", exact=True).focus()
+        # Simulate a reduced visual viewport without pretending to test an Android keyboard.
+        page.evaluate("""() => {
+            Object.defineProperty(visualViewport, 'height', {get: () => 200, configurable: true});
+            visualViewport.dispatchEvent(new Event('resize'));
+        }""")
+        expect(page.locator(".mobile-nav")).to_be_hidden()
+        page.get_by_label("День", exact=True).focus()
+        expect(page.locator(".mobile-nav")).to_be_hidden()
+        page.get_by_label("День", exact=True).blur()
+        expect(page.locator(".mobile-nav")).to_be_visible()
+        page.screenshot(path=str(data_dir / "form-short-screen.png"), full_page=True)
         page.goto(base_url + "/birthdays")
         page.wait_for_load_state("networkidle")
         assert page.locator(".row-countdown").count() > 0

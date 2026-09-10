@@ -47,6 +47,16 @@ def main():
             "--detach",
             "--name",
             name,
+            "--init",
+            "--read-only",
+            "--cap-drop",
+            "ALL",
+            "--security-opt",
+            "no-new-privileges:true",
+            "--tmpfs",
+            "/tmp:size=32m,mode=1777",
+            "--mount",
+            f"type=volume,source={name}-data,target=/data",
             "--publish",
             "127.0.0.1::8000",
             "--env",
@@ -82,6 +92,24 @@ def main():
             "db.execute(\"INSERT INTO groups(name) VALUES (?)\", ('Ёжики 🎂',)); "
             "db.commit(); db.close()",
         )
+        docker("exec", name, "python", "-m", "app.db", "backup")
+        docker(
+            "exec",
+            name,
+            "python",
+            "-c",
+            "from pathlib import Path; import shutil, sqlite3; "
+            "backup=max(Path('/data/backups').glob('*.db')); "
+            "Path('/data/restore').mkdir(); "
+            "shutil.copyfile(backup, '/data/restore/happyday.db'); "
+            "db=sqlite3.connect('/data/restore/happyday.db'); "
+            "assert db.execute('PRAGMA integrity_check').fetchone() == ('ok',); "
+            "assert db.execute(\"SELECT name FROM groups WHERE name=?\", ('Ёжики 🎂',))."
+            "fetchone() == ('Ёжики 🎂',); db.close()",
+        )
+        docker(
+            "exec", "--env", "APP_DATA_DIR=/data/restore", name, "python", "-m", "app.db", "check"
+        )
         docker("restart", "--time", "10", name)
         # Docker may assign a new ephemeral host port after restarting.
         base_url = published_url(name)
@@ -95,7 +123,7 @@ def main():
             "assert db.execute(\"SELECT name FROM groups WHERE name=?\", ('Ёжики 🎂',))."
             "fetchone() == ('Ёжики 🎂',); db.close()",
         )
-        print("Docker startup, health, UTF-8, non-root and restart: OK")
+        print("Docker health, read-only root, UTF-8, backup/restore and restart: OK")
     except Exception:
         if started:
             print(docker("logs", "--tail", "60", name))
@@ -103,6 +131,7 @@ def main():
     finally:
         if started:
             docker("rm", "--force", name)
+            docker("volume", "rm", name + "-data")
 
 
 if __name__ == "__main__":

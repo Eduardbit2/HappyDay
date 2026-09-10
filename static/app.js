@@ -20,6 +20,7 @@ if (window.visualViewport) {
     document.body.classList.toggle("keyboard-open", editing && visualViewport.height < window.innerHeight * .78);
   };
   visualViewport.addEventListener("resize", updateKeyboard);
+  document.addEventListener("focusin", updateKeyboard);
   document.addEventListener("focusout", () => document.body.classList.remove("keyboard-open"));
 }
 

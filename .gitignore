@@ -27,3 +27,5 @@ test-results/
 playwright-report/
 .idea/
 .vscode/
+
+deploy/*.env

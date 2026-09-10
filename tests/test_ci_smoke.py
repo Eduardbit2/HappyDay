@@ -55,4 +55,5 @@ def test_smoke_refreshes_port_after_restart(monkeypatch):
     monkeypatch.setattr("sys.argv", ["check_docker.py"])
     check_docker.main()
     assert checked == ["http://127.0.0.1:12345", "http://127.0.0.1:23456"]
-    assert commands[-1][0:2] == ("rm", "--force")
+    assert commands[-2][0:2] == ("rm", "--force")
+    assert commands[-1][0:2] == ("volume", "rm")

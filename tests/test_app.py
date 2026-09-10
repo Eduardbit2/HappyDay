@@ -79,3 +79,23 @@ def test_failed_migration_prevents_start(tmp_path, monkeypatch):
     with pytest.raises(RuntimeError, match="Migration failed"), TestClient(app):
         pass
     assert app.state.ready is False
+
+
+@pytest.mark.parametrize(
+    "address,status", [("127.0.0.1", 200), ("::1", 200), ("203.0.113.10", 404), ("172.20.0.1", 404)]
+)
+def test_production_health_is_container_local(tmp_path, address, status):
+    app = create_app(
+        Settings(
+            _env_file=None,
+            env="production",
+            base_url="https://happyday.example",
+            allowed_hosts=["happyday.example"],
+            data_dir=tmp_path,
+            scheduler_enabled=False,
+        )
+    )
+    with TestClient(app, base_url="https://happyday.example", client=(address, 12345)) as client:
+        for path in ("/health/live", "/health/ready"):
+            assert client.get(path, headers={"X-Forwarded-For": "127.0.0.1"}).status_code == status
+        assert client.get("/login").status_code == 200

@@ -1,0 +1,59 @@
+name: happyday
+
+services:
+  app:
+    image: happyday:${HAPPYDAY_IMAGE_TAG:?Set a version tag matching the deployed commit}
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    init: true
+    stop_grace_period: 60s
+    user: "10001:10001"
+    read_only: true
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+    tmpfs:
+      - /tmp:size=32m,mode=1777
+    ports:
+      - "127.0.0.1:8787:8000"
+    volumes:
+      - type: bind
+        source: ${HAPPYDAY_DATA_PATH:?Set an existing absolute data directory}
+        target: /data
+        bind:
+          create_host_path: false
+    environment:
+      APP_ENV: production
+      APP_BASE_URL: ${APP_BASE_URL:?Set the public HTTPS URL}
+      APP_ALLOWED_HOSTS: ${APP_ALLOWED_HOSTS:?Set the JSON list of public hostnames}
+      APP_DATA_DIR: /data
+      APP_TELEGRAM_TOKEN: ${APP_TELEGRAM_TOKEN:-}
+      APP_SCHEDULER_ENABLED: "true"
+      APP_SESSION_HOURS: "168"
+      APP_LOG_LEVEL: INFO
+      TZ: Europe/Moscow
+      LANG: C.UTF-8
+      PYTHONUTF8: "1"
+    command:
+      - python
+      - -m
+      - uvicorn
+      - app.main:create_app
+      - --factory
+      - --host
+      - 0.0.0.0
+      - --port
+      - "8000"
+      - --workers
+      - "1"
+      - --proxy-headers
+      - --forwarded-allow-ips
+      - ${HAPPYDAY_TRUSTED_PROXIES:?Set the exact reverse proxy source IP}
+      - --no-access-log
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
