@@ -13,6 +13,11 @@ def docker(*args):
     return subprocess.check_output(["docker", *args], text=True, encoding="utf-8").strip()
 
 
+def published_url(name):
+    ports = json.loads(docker("inspect", "--format", "{{json .NetworkSettings.Ports}}", name))
+    return "http://127.0.0.1:" + ports["8000/tcp"][0]["HostPort"]
+
+
 def wait_ready(name, base_url):
     deadline = time.monotonic() + 90
     while time.monotonic() < deadline:
@@ -53,8 +58,7 @@ def main():
             args.image,
         )
         started = True
-        ports = json.loads(docker("inspect", "--format", "{{json .NetworkSettings.Ports}}", name))
-        base_url = "http://127.0.0.1:" + ports["8000/tcp"][0]["HostPort"]
+        base_url = published_url(name)
         wait_ready(name, base_url)
         assert docker("exec", name, "id", "-u") == "10001"
         with urllib.request.urlopen(base_url + "/login", timeout=5) as response:
@@ -79,6 +83,8 @@ def main():
             "db.commit(); db.close()",
         )
         docker("restart", "--time", "10", name)
+        # Docker may assign a new ephemeral host port after restarting.
+        base_url = published_url(name)
         wait_ready(name, base_url)
         docker(
             "exec",
