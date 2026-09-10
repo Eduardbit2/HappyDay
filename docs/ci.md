@@ -40,3 +40,10 @@ Compose и приемка на Synology относятся к следующем
 
 Основные источники: [GitHub Actions для Python](https://docs.github.com/en/actions/tutorials/build-and-test-code/python),
 [uv в Docker](https://docs.astral.sh/uv/guides/integration/docker/).
+
+
+## Приемка
+
+10 сентября 2026 года успешно выполнен [полный CI-запуск](https://github.com/Eduardbit2/HappyDay/actions/runs/34459349639):
+186 тестов на Windows и Ubuntu, миграции, Chromium, Docker build и smoke после
+перезапуска. Проверка заново получает случайно назначенный порт после restart.
