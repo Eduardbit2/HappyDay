@@ -9,9 +9,10 @@ services:
     restart: unless-stopped
     init: true
     stop_grace_period: 60s
-    user: "10001:10001"
+    user: "0:0"
     read_only: true
     cap_drop: [ALL]
+    cap_add: [CHOWN, FOWNER, DAC_OVERRIDE, SETUID, SETGID, KILL]
     security_opt:
       - no-new-privileges:true
     tmpfs:

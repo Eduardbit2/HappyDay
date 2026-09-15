@@ -18,7 +18,9 @@ COPY --from=builder /app/.venv /app/.venv
 COPY app ./app
 COPY templates ./templates
 COPY static ./static
-USER 10001:10001
+COPY deploy/docker-entrypoint.py /usr/local/bin/happyday-entrypoint.py
+USER 0:0
+ENTRYPOINT ["python", "-I", "/usr/local/bin/happyday-entrypoint.py"]
 EXPOSE 8000
 HEALTHCHECK --interval=10s --timeout=5s --start-period=30s --retries=3 \
     CMD python -c "import os,urllib.request,urllib.parse; host=urllib.parse.urlsplit(os.getenv('APP_BASE_URL','http://localhost')).hostname; request=urllib.request.Request('http://127.0.0.1:8000/health/ready',headers={'Host':host}); urllib.request.urlopen(request,timeout=3)"
