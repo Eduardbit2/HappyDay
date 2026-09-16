@@ -36,12 +36,16 @@ def main():
     assert str(app["ports"][0]["published"]) == "8787"
     assert app["ports"][0]["target"] == 8000
     assert app["read_only"] and app["init"]
-    assert app["user"] == "10001:10001"
+    assert app["user"] == "0:0"
     assert app["volumes"][0]["target"] == "/data"
     assert app["volumes"][0]["bind"].get("create_host_path", False) is False
     assert app["restart"] == "unless-stopped"
     assert app["logging"]["options"]["max-file"] == "3"
-    print("Compose interpolation, persistent data and loopback binding: OK")
+    assert set(config["services"]) == {"app"}
+    assert app["cap_drop"] == ["ALL"]
+    assert set(app["cap_add"]) == {"CHOWN", "FOWNER", "DAC_OVERRIDE", "SETUID", "SETGID", "KILL"}
+    assert "no-new-privileges:true" in app["security_opt"]
+    print("Compose interpolation, data initialization and loopback binding: OK")
 
 
 if __name__ == "__main__":

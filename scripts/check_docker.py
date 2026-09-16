@@ -8,8 +8,13 @@ import urllib.error
 import urllib.request
 from uuid import uuid4
 
+CAPS = ("CHOWN", "FOWNER", "DAC_OVERRIDE", "SETUID", "SETGID", "KILL")
+CAP_ARGS = tuple(item for cap in CAPS for item in ("--cap-add", cap))
+
 
 def docker(*args):
+    if args[0] == "exec":
+        args = ("exec", "--user", "10001:10001", *args[1:])
     return subprocess.check_output(["docker", *args], text=True, encoding="utf-8").strip()
 
 
@@ -41,7 +46,68 @@ def main():
     args = parser.parse_args()
     name = "happyday-smoke-" + uuid4().hex
     started = False
+    volume_created = False
     try:
+        docker("volume", "create", name + "-data")
+        volume_created = True
+        # Имитируем загруженную через File Station базу с чужим владельцем.
+        docker(
+            "run",
+            "--rm",
+            "--entrypoint",
+            "python",
+            "--user",
+            "0:0",
+            "--mount",
+            f"type=volume,source={name}-data,target=/data",
+            "--env",
+            "APP_ENV=test",
+            "--env",
+            "APP_TELEGRAM_TOKEN=",
+            args.image,
+            "-c",
+            "import os, sqlite3; from pathlib import Path; "
+            "from app.db.migrations import upgrade_database; "
+            "upgrade_database(Path('/data/happyday.db')); "
+            "db=sqlite3.connect('/data/happyday.db'); "
+            "db.execute(\"INSERT INTO groups(name) VALUES (?)\", ('Перенос Ё 🎂',)); "
+            "db.commit(); db.close(); "
+            "os.chown('/data/happyday.db', 12345, 12345); "
+            "os.chmod('/data/happyday.db', 0o600); "
+            "os.chown('/data', 12345, 12345); os.chmod('/data', 0o700)",
+        )
+        # Сам entrypoint должен выполнить произвольную команду уже без root.
+        probe = docker(
+            "run",
+            "--rm",
+            "--read-only",
+            "--cap-drop",
+            "ALL",
+            *CAP_ARGS,
+            "--security-opt",
+            "no-new-privileges:true",
+            "--mount",
+            f"type=volume,source={name}-data,target=/data",
+            args.image,
+            "python",
+            "-c",
+            "import os, sqlite3; from pathlib import Path; "
+            "assert os.getresuid() == (10001,)*3; "
+            "assert os.getresgid() == (10001,)*3; assert os.getgroups() == []; "
+            "status=dict(line.split(':', 1) for line in "
+            "Path('/proc/self/status').read_text().splitlines()); "
+            "assert all(int(status[k].strip(),16)==0 for k in "
+            "('CapEff','CapPrm','CapInh','CapAmb')); "
+            "assert int(status['NoNewPrivs']) == 1; "
+            "assert Path('/data').stat().st_mode & 0o777 == 0o750; "
+            "assert Path('/data/happyday.db').stat().st_mode & 0o777 == 0o640; "
+            "db=sqlite3.connect('/data/happyday.db'); "
+            'assert db.execute("SELECT name FROM groups WHERE name=?", '
+            "('Перенос Ё 🎂',)).fetchone() == ('Перенос Ё 🎂',); "
+            "assert db.execute('PRAGMA integrity_check').fetchone() == ('ok',); "
+            "db.close(); print('Entrypoint permissions and imported UTF-8 database: OK')",
+        )
+        print(probe)
         docker(
             "run",
             "--detach",
@@ -51,6 +117,7 @@ def main():
             "--read-only",
             "--cap-drop",
             "ALL",
+            *CAP_ARGS,
             "--security-opt",
             "no-new-privileges:true",
             "--tmpfs",
@@ -70,7 +137,22 @@ def main():
         started = True
         base_url = published_url(name)
         wait_ready(name, base_url)
-        assert docker("exec", name, "id", "-u") == "10001"
+        # Проверяем UID реального Uvicorn, а не пользователя docker exec.
+        docker(
+            "exec",
+            name,
+            "python",
+            "-c",
+            "from pathlib import Path; "
+            "processes=[p for p in Path('/proc').iterdir() if p.name.isdigit() "
+            "and (p/'cmdline').read_bytes().split(b'\\x00')[1:3] == [b'-m', b'uvicorn']]; "
+            "assert len(processes)==1; "
+            "status=dict(line.split(':',1) for line in "
+            "(processes[0]/'status').read_text().splitlines()); "
+            "assert status['Uid'].split()==['10001']*4; "
+            "assert status['Gid'].split()==['10001']*4; "
+            "assert int(status['CapEff'].strip(),16)==0",
+        )
         with urllib.request.urlopen(base_url + "/login", timeout=5) as response:
             assert "Логин" in response.read().decode("utf-8")
         docker(
@@ -131,6 +213,7 @@ def main():
     finally:
         if started:
             docker("rm", "--force", name)
+        if volume_created:
             docker("volume", "rm", name + "-data")
 
 
